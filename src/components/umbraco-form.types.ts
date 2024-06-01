@@ -50,7 +50,6 @@ interface FormFieldPrevalueDto {
 export type FormFieldTypeName =
   | "Short answer"
   | "Long answer"
-  | "Email"
   | "Checkbox"
   | "Dropdown"
   | "Multiple choice"

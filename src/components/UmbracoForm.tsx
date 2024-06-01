@@ -108,9 +108,11 @@ function mapFieldTypeNameToInputNode({
     name: field.alias,
     id: field.id,
     required: field.required,
-    placeholder: field.placeholder,
-    title: field.caption,
-    autoComplete: field.settings?.autocompleteAttribute,
+    placeholder: field.placeholder ? field.placeholder : undefined,
+    title: field.caption ? field.caption : undefined,
+    autoComplete: field?.settings?.autocompleteAttribute
+      ? field.settings?.autocompleteAttribute
+      : undefined,
     pattern: field.pattern ? field.pattern : undefined,
   };
 
@@ -120,11 +122,14 @@ function mapFieldTypeNameToInputNode({
 
   switch (field.type.name) {
     case "Short answer":
-      return <input type="text" {...common} />;
+      return (
+        <input
+          {...common}
+          type={field?.settings?.fieldType === "email" ? "email" : "text"}
+        />
+      );
     case "Long answer":
       return <textarea {...common} />;
-    case "Email":
-      return <input type="email" {...common} />;
     case "Checkbox":
       return <input type="checkbox" {...common} />;
     case "Multiple choice":
