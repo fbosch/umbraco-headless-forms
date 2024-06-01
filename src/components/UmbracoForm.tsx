@@ -122,12 +122,7 @@ function mapFieldTypeNameToInputNode({
 
   switch (field.type.name) {
     case "Short answer":
-      return (
-        <input
-          {...common}
-          type={field?.settings?.fieldType === "email" ? "email" : "text"}
-        />
-      );
+      return <input type={field?.settings?.fieldType || "text"} {...common} />;
     case "Long answer":
       return <textarea {...common} />;
     case "Checkbox":
