@@ -290,7 +290,7 @@ function UmbracoForm(props: UmbracoFormProps) {
               <Fragment key={id + "-fieldset-" + index}>
                 {_renderFieldset({ fieldset })(
                   fieldset.columns.map((column, index) => (
-                    <Fragment key={"column-" + index}>
+                    <Fragment key={id + "-column-" + index}>
                       {_renderColumn({ column })(
                         column.fields.map((field, index) => (
                           <Fragment key={id + "-field-" + index}>
