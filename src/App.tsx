@@ -1,5 +1,5 @@
 import "./App.css";
-import UmbracoForm from "./components/UmbracoForm";
+import UmbracoForm, { Field } from "./components/UmbracoForm";
 import type { UmbracoFormDefinition } from "./components/umbraco-form.types";
 import formData from "./form-data";
 
@@ -26,9 +26,8 @@ function App() {
         }}
         renderField={(props) => {
           return (
-            <div className="flex flex-col">
-              <label htmlFor={props.field.alias}>{props.field.caption}</label>
-              {props.children}
+            <div className="flex flex-col space-y-2">
+              <Field {...props} />
             </div>
           );
         }}
@@ -36,7 +35,7 @@ function App() {
           e.preventDefault();
           const form = e.target as HTMLFormElement;
           const formData = new FormData(form);
-          console.log(formData);
+          console.log(Object.fromEntries(formData.entries()));
         }}
       />
     </div>
