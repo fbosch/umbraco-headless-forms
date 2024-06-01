@@ -95,11 +95,7 @@ function defaultRenderField({
   );
 }
 
-function exhaustiveCheck(value: string): never {
-  throw new Error("Exhaustive check failed for value: " + value);
-}
-
-function defaultRenderInput({ field }: RenderInputProps): React.ReactNode {
+function mapFieldTypeNameToInput({ field }: RenderInputProps): React.ReactNode {
   const common = {
     name: field.alias,
     id: field.alias,
@@ -108,17 +104,21 @@ function defaultRenderInput({ field }: RenderInputProps): React.ReactNode {
     autoComplete: field.settings?.autocompleteAttribute,
   };
 
-  switch (field.type.name.toLowerCase()) {
-    case "short answer":
+  function exhaustiveCheck(value: never): never {
+    throw new Error("Exhaustive check failed for value: " + value);
+  }
+
+  switch (field.type.name) {
+    case "Short answer":
       return <input type="text" {...common} />;
-    case "long answer":
+    case "Long answer":
       return <textarea {...common} />;
-    case "email":
+    case "Email":
       return <input type="email" {...common} />;
-    case "checkbox":
+    case "Checkbox":
       return <input type="checkbox" {...common} />;
-    case "multiple choice":
-    case "dropdown":
+    case "Multiple choice":
+    case "Dropdown":
       return (
         <select {...common} multiple={field.settings?.allowMultipleSelections}>
           {field.preValues.map((preValue, index) => (
@@ -128,9 +128,9 @@ function defaultRenderInput({ field }: RenderInputProps): React.ReactNode {
           ))}
         </select>
       );
-    case "data consent":
+    case "Data Consent":
       return <input type="checkbox" {...common} />;
-    case "file upload":
+    case "File upload":
       return (
         <input
           type="file"
@@ -138,13 +138,19 @@ function defaultRenderInput({ field }: RenderInputProps): React.ReactNode {
           accept={field.fileUploadOptions?.allowedUploadExtensions.join(",")}
         />
       );
-    case "recaptcha2":
+    case "Recaptcha2":
       return <input type="hidden" {...common} />;
-    case "recaptcha v3 with score":
+    case "Recaptcha v3 with score":
       return <input type="hidden" {...common} />;
     default:
       return exhaustiveCheck(field.type.name);
   }
+}
+
+function defaultRenderInput({
+  field,
+}: RenderInputProps): React.ReactNode | undefined {
+  return mapFieldTypeNameToInput({ field });
 }
 
 function defaultRenderSubmitButton({
@@ -188,9 +194,12 @@ function UmbracoForm(props: UmbracoFormProps) {
                           <Fragment key={"field-" + index}>
                             {renderField({
                               field,
-                              children: renderInput({
-                                field,
-                              }),
+                              children:
+                                renderInput({
+                                  field,
+                                }) ??
+                                // fallback to default input rendering if custom rendering returns undefined
+                                defaultRenderInput({ field }),
                             })}
                           </Fragment>
                         )),

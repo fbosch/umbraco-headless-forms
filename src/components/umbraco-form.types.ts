@@ -47,14 +47,14 @@ interface FormFieldPrevalueDto {
   caption: string;
 }
 
-type FormFieldTypeName =
+export type FormFieldTypeName =
   | "Short answer"
   | "Long answer"
   | "Email"
   | "Checkbox"
   | "Dropdown"
   | "Multiple choice"
-  | "Data consent"
+  | "Data Consent"
   | "File upload"
   | "Recaptcha2"
   | "Recaptcha v3 with score";
