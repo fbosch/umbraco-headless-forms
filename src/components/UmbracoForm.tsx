@@ -26,6 +26,10 @@ type RenderProps = CommonRenderProps &
       }
   );
 
+type RenderFormProps = CommonRenderProps & {
+  form: UmbracoFormDefinition;
+} & React.FormHTMLAttributes<HTMLFormElement>;
+
 type RenderPageProps = RenderProps & { page: FormPageDto };
 
 type RenderFieldsetProps = RenderProps & { fieldset: FormFieldsetDto };
@@ -46,12 +50,17 @@ export interface UmbracoFormProps
   extends React.FormHTMLAttributes<HTMLFormElement> {
   form: UmbracoFormDefinition;
   requestToken?: string;
+  renderForm?: (props: RenderFormProps) => React.ReactNode;
   renderPage?: (props: RenderPageProps) => React.ReactNode;
   renderFieldset?: (props: RenderFieldsetProps) => React.ReactNode;
   renderColumn?: (props: RenderColumnProps) => React.ReactNode;
   renderField?: (props: RenderFieldProps) => React.ReactNode;
   renderInput?: (props: RenderInputProps) => React.ReactNode | undefined;
   renderSubmitButton?: (props: RenderSubmitButtonProps) => React.ReactNode;
+}
+
+export function Form({ form, ...rest }: RenderFormProps): React.ReactNode {
+  return <form {...rest} id={"form-" + form.id} name={form.id} />;
 }
 
 export function Page({ page, children }: RenderPageProps): React.ReactNode {
@@ -90,7 +99,7 @@ export function Column({
 export function Field({ field, children }: RenderFieldProps): React.ReactNode {
   return (
     <Fragment>
-      <label htmlFor={field.alias}>{field.caption}</label>
+      <label htmlFor={field.id}>{field.caption}</label>
       {children}
       {field.helpText ? <span>{field.helpText}</span> : null}
     </Fragment>
@@ -98,12 +107,6 @@ export function Field({ field, children }: RenderFieldProps): React.ReactNode {
 }
 
 export function Input({ field }: RenderInputProps): React.ReactNode {
-  return mapFieldTypeNameToInputNode({ field });
-}
-
-function mapFieldTypeNameToInputNode({
-  field,
-}: RenderInputProps): React.ReactNode {
   const common = {
     name: field.alias,
     id: field.id,
@@ -184,6 +187,7 @@ function defaultRenderSubmitButton({
   return <button type="submit">{form.submitLabel}</button>;
 }
 
+const defaultRenderForm = (props: RenderFormProps) => <Form {...props} />;
 const defaultRenderPage = (props: RenderPageProps) => <Page {...props} />;
 const defaultRenderFieldset = (props: RenderFieldsetProps) => (
   <FieldSet {...props} />
@@ -196,7 +200,7 @@ function UmbracoForm(props: UmbracoFormProps) {
   const id = useId();
   const {
     form,
-    onSubmit,
+    renderForm = defaultRenderForm,
     renderPage = defaultRenderPage,
     renderFieldset = defaultRenderFieldset,
     renderColumn = defaultRenderColumn,
@@ -207,43 +211,47 @@ function UmbracoForm(props: UmbracoFormProps) {
     ...rest
   } = props;
 
-  return (
-    <form {...rest} id={"form-" + form.id} name={form.id} onSubmit={onSubmit}>
-      {form.pages.map((page, index) => (
-        <Fragment key={id + "-page-" + index}>
-          {renderPage({
-            page,
-            children: page.fieldsets.map((fieldset, index) => (
-              <Fragment key={id + "-fieldset-" + index}>
-                {renderFieldset({
-                  fieldset,
-                  children: fieldset.columns.map((column, index) => (
-                    <Fragment key={id + "-column-" + index}>
-                      {renderColumn({
-                        column,
-                        children: column.fields.map((field, index) => (
-                          <Fragment key={id + "-field-" + index}>
-                            {renderField({
-                              field,
-                              children:
-                                renderInput({ field }) ??
-                                defaultRenderInput({ field }),
-                            })}
-                          </Fragment>
-                        )),
-                      })}
-                    </Fragment>
-                  )),
-                })}
-              </Fragment>
-            )),
-          })}
-        </Fragment>
-      ))}
-      {children}
-      {renderSubmitButton({ form })}
-    </form>
-  );
+  return renderForm({
+    form,
+    ...rest,
+    children: (
+      <Fragment>
+        {form.pages.map((page, index) => (
+          <Fragment key={id + "-page-" + index}>
+            {renderPage({
+              page,
+              children: page.fieldsets.map((fieldset, index) => (
+                <Fragment key={id + "-fieldset-" + index}>
+                  {renderFieldset({
+                    fieldset,
+                    children: fieldset.columns.map((column, index) => (
+                      <Fragment key={id + "-column-" + index}>
+                        {renderColumn({
+                          column,
+                          children: column.fields.map((field, index) => (
+                            <Fragment key={id + "-field-" + index}>
+                              {renderField({
+                                field,
+                                children:
+                                  renderInput({ field }) ??
+                                  defaultRenderInput({ field }),
+                              })}
+                            </Fragment>
+                          )),
+                        })}
+                      </Fragment>
+                    )),
+                  })}
+                </Fragment>
+              )),
+            })}
+          </Fragment>
+        ))}
+        {children}
+        {renderSubmitButton({ form })}
+      </Fragment>
+    ),
+  });
 }
 
 export default UmbracoForm;
