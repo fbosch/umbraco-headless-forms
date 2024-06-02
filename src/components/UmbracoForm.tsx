@@ -6,6 +6,7 @@ import type {
   FormFieldsetColumnDto,
   FormFieldDto,
 } from "./umbraco-form.types";
+import { umbracoFormToZod } from "./umbraco-form-to-zod";
 
 type RenderProps = {
   children: React.ReactNode;
@@ -103,6 +104,9 @@ function DefaultInput({ field }: InputProps): React.ReactNode {
       ? field.settings?.autocompleteAttribute
       : undefined,
     pattern: field.pattern ? field.pattern : undefined,
+    defaultValue: field?.settings?.defaultValue
+      ? field.settings?.defaultValue
+      : undefined,
   };
 
   function exhaustiveCheck(value: never): never {
@@ -188,6 +192,8 @@ function UmbracoForm(props: UmbracoFormProps) {
     ...rest
   } = props;
 
+  const schema = umbracoFormToZod(form);
+
   return (
     <Form form={form} {...rest}>
       {form.pages.map((page, index) => (
@@ -210,7 +216,10 @@ function UmbracoForm(props: UmbracoFormProps) {
                       key={id + "-field-" + index}
                       form={form}
                     >
-                      {Input({ field, form }) ?? DefaultInput({ field, form })}
+                      {
+                        // fallback to default component if custom component returns undefined
+                        Input({ field, form }) ?? DefaultInput({ field, form })
+                      }
                     </Field>
                   ))}
                 </Column>

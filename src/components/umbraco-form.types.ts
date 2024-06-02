@@ -81,7 +81,7 @@ export interface FormFieldDto {
   helpText: string | null | undefined;
   placeholder: string | undefined;
   cssClass?: string | null | undefined;
-  alias: string | undefined;
+  alias: string;
   required: boolean;
   requiredErrorMessage: string | null | undefined;
   pattern: string | undefined;
