@@ -36,13 +36,13 @@ export function mapFieldToZod(
     case "Multiple choice":
     case "Dropdown":
       zodType = z.string({
-        required_error: field?.requiredErrorMessage ?? "Required",
+        required_error: field?.requiredErrorMessage,
         coerce: true,
       });
       if (field?.pattern) {
         const regex = new RegExp(field.pattern);
         zodType = zodType.refine((value) => regex.test(value), {
-          message: field.patternInvalidErrorMessage ?? "Invalid",
+          message: field.patternInvalidErrorMessage,
         });
       }
       break;
@@ -51,7 +51,7 @@ export function mapFieldToZod(
     case "Recaptcha2":
     case "Recaptcha v3 with score":
       zodType = z.boolean({
-        required_error: field?.requiredErrorMessage ?? "Required",
+        required_error: field?.requiredErrorMessage,
         coerce: true,
       });
       break;
@@ -98,7 +98,7 @@ export function umbracoFormToZod(form: FormDto, config?: UmbracoFormConfig) {
   return z.object({ ...mappedFields });
 }
 
-/** parses form data and coerces it to the form schema */
+/** coerces form data to the schema format */
 export function coerceFormData(
   formData: FormData | undefined,
   schema: ReturnType<typeof umbracoFormToZod>,
@@ -113,7 +113,7 @@ export function coerceFormData(
   return output;
 }
 
-export function parseRuleValue(def: z.ZodTypeAny, value: unknown): any {
+export function coerceRuleValue(def: z.ZodTypeAny, value: unknown): any {
   const baseShape = findBaseShape(def);
   // handle specific rule values from Umbraco
   if (baseShape instanceof ZodBoolean) {

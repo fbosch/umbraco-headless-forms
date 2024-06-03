@@ -9,7 +9,7 @@ import { getFieldById, exhaustiveCheck } from "./utils";
 import {
   coerceFormData,
   mapFieldToZod,
-  parseRuleValue,
+  coerceRuleValue,
 } from "./umbraco-form-to-zod";
 
 export function showIndicator(field: FormFieldDto, form: FormDto) {
@@ -38,10 +38,9 @@ export function validateConditionRules(
     const targetField = getFieldById(form, rule.field);
     const zodType = mapFieldToZod(targetField, config);
     const parsedFormData = coerceFormData(formData, config.schema);
-
     const alias = targetField?.alias as string;
     const fieldValue = parsedFormData[alias];
-    const ruleValue = parseRuleValue(zodType, rule.value);
+    const ruleValue = coerceRuleValue(zodType, rule.value);
 
     switch (operator) {
       case "Is":

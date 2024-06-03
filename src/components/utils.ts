@@ -10,7 +10,7 @@ export function exhaustiveCheck(value: never): never {
   throw new Error("Exhaustive check failed for value: " + value);
 }
 
-/** Returns all fields in the form in a flat array */
+/** Returns all fields in the form definition as a flat array */
 export function getAllFields(form: FormDto) {
   return form?.pages?.flatMap((page) =>
     page?.fieldsets?.flatMap((fieldset) =>

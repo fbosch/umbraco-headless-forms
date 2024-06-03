@@ -76,14 +76,17 @@ function DefaultField({
   field,
   children,
   condition,
+  issues,
   context,
 }: FieldProps): React.ReactNode {
   if (condition.hide) return null;
+  const hasIssues = issues && issues.length > 0;
+  const showValidationErrors =
+    hasIssues && context.form.hideFieldValidation !== true;
   const indicator = showIndicator(field, context.form)
     ? context.form.indicator
     : "";
-
-  const helpTextId = field.helpText ? "helpText-" + field.id : "";
+  const helpTextId = field.helpText ? "helpText:" + field.id : "";
   return (
     <Fragment>
       <label htmlFor={field.id} aria-describedby={helpTextId}>
@@ -91,13 +94,17 @@ function DefaultField({
       </label>
       {children}
       {field.helpText ? <span id={helpTextId}>{field.helpText}</span> : null}
+      {showValidationErrors ? (
+        <span id={"error:" + field.id}>{issues?.at(0)?.message}</span>
+      ) : null}
     </Fragment>
   );
 }
 
 function DefaultInput({ field, issues, context }: InputProps): React.ReactNode {
-  const { enableNativeValidation: nativeValidation = false } =
-    context.config ?? {};
+  const { enableNativeValidation = false } = context.config ?? {};
+  const hasIssues = issues && issues?.length > 0;
+
   let common = {
     name: field.alias,
     id: field.id,
@@ -109,13 +116,14 @@ function DefaultInput({ field, issues, context }: InputProps): React.ReactNode {
     defaultValue: field?.settings?.defaultValue
       ? field.settings?.defaultValue
       : undefined,
-    required: nativeValidation ? field.required : undefined,
-    pattern: nativeValidation
+    required: enableNativeValidation ? field.required : undefined,
+    pattern: enableNativeValidation
       ? field.pattern
         ? field.pattern
         : undefined
       : undefined,
-    ["aria-invalid"]: issues && issues?.length > 0 ? true : undefined,
+    ["aria-invalid"]: hasIssues,
+    ["aria-errormessage"]: hasIssues ? issues.at(0)?.message : undefined,
   };
 
   const fieldName = field?.type?.name as DefaultFormFieldTypeName;
@@ -131,7 +139,7 @@ function DefaultInput({ field, issues, context }: InputProps): React.ReactNode {
       return (
         <Fragment>
           {field?.preValues?.map((preValue) => {
-            const id = common.id + "-" + preValue.value;
+            const id = preValue.value + ":" + common.id;
             return (
               <Fragment key={id}>
                 <label htmlFor={id}>{preValue.caption}</label>
@@ -154,7 +162,7 @@ function DefaultInput({ field, issues, context }: InputProps): React.ReactNode {
         >
           {field?.preValues?.map((preValue) => (
             <option
-              key={common.id + "-" + preValue.value}
+              key={`${common.id}.${preValue.value}`}
               value={preValue.value}
             >
               {preValue.caption}
@@ -248,22 +256,22 @@ function UmbracoForm(props: UmbracoFormProps) {
     >
       {form?.pages?.map((page, index) => (
         <Page
+          key={"page." + index}
           page={page}
-          key={"page-" + index}
           context={context}
           condition={evaluateCondition(page, form, formData, config)}
         >
           {page?.fieldsets?.map((fieldset, index) => (
             <Fieldset
+              key={"fieldset." + index}
               fieldset={fieldset}
-              key={"fieldset-" + index}
               context={context}
               condition={evaluateCondition(fieldset, form, formData, config)}
             >
               {fieldset?.columns?.map((column, index) => (
                 <Column
+                  key={"column." + index}
                   column={column}
-                  key={"column-" + index}
                   context={context}
                 >
                   {column?.fields?.map((field) => {
@@ -273,8 +281,8 @@ function UmbracoForm(props: UmbracoFormProps) {
                     );
                     return (
                       <Field
+                        key={"field." + field?.id}
                         field={field}
-                        key={"field-" + field?.id}
                         context={context}
                         condition={evaluateCondition(
                           field,

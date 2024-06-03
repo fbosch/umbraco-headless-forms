@@ -7,17 +7,17 @@ import {
 import formDefinition from "./form-definition";
 import { FormDto } from "./components/types";
 
-const data = formDefinition as unknown as FormDto;
-const schema = umbracoFormToZod(data);
+const form = formDefinition as unknown as FormDto;
+const schema = umbracoFormToZod(form);
 
 function App() {
   return (
     <div className="p-4">
       <UmbracoForm
         config={{
-          enableNativeValidation: true,
+          enableNativeValidation: false,
         }}
-        form={data}
+        form={form}
         renderPage={(props) => (
           <div className="space-y-4">
             {props.page.caption ? (
@@ -42,18 +42,6 @@ function App() {
           const formData = new FormData(form);
           const values = coerceFormData(formData, schema);
           console.log("submit", values);
-        }}
-        onChange={(e) => {
-          const form = e.currentTarget as HTMLFormElement;
-          const formData = new FormData(form);
-          // const values = coerceFormData(formData, schema);
-
-          // try {
-          //   schema.parse(values);
-          // } catch (error) {
-          //   const validationError = fromError(error);
-          //   console.log(validationError);
-          // }
         }}
       />
     </div>
