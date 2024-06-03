@@ -1,8 +1,9 @@
 import React, { Fragment, useState } from "react";
 import type {
+  FormContext,
+  UmbracoFormConfig,
   DefaultFormFieldTypeName,
   FormDto,
-  UmbracoFormConfig,
   FormProps,
   PageProps,
   ColumnProps,
@@ -10,11 +11,11 @@ import type {
   FieldsetProps,
   FieldProps,
   SubmitButtonProps,
-  FormContext,
 } from "./types";
 import { evaluateCondition, exhaustiveCheck } from "./utils";
 import { coerceFormData, umbracoFormToZod } from "./umbraco-form-to-zod";
 import { ZodIssue } from "zod-validation-error";
+import { showIndicator } from "./predicates";
 
 export interface UmbracoFormProps
   extends React.FormHTMLAttributes<HTMLFormElement> {
@@ -75,19 +76,28 @@ function DefaultField({
   field,
   children,
   condition,
+  context,
 }: FieldProps): React.ReactNode {
   if (condition.hide) return null;
+  const indicator = showIndicator(field, context.form)
+    ? context.form.indicator
+    : "";
+
+  const helpTextId = field.helpText ? "helpText-" + field.id : "";
   return (
     <Fragment>
-      <label htmlFor={field.id}>{field.caption}</label>
+      <label htmlFor={field.id} aria-describedby={helpTextId}>
+        {field.caption} {indicator}
+      </label>
       {children}
-      {field.helpText ? <span>{field.helpText}</span> : null}
+      {field.helpText ? <span id={helpTextId}>{field.helpText}</span> : null}
     </Fragment>
   );
 }
 
-function DefaultInput({ field, context }: InputProps): React.ReactNode {
-  const { disableDefaultValidation = false } = context.config ?? {};
+function DefaultInput({ field, issues, context }: InputProps): React.ReactNode {
+  const { enableNativeValidation: nativeValidation = false } =
+    context.config ?? {};
   let common = {
     name: field.alias,
     id: field.id,
@@ -99,8 +109,13 @@ function DefaultInput({ field, context }: InputProps): React.ReactNode {
     defaultValue: field?.settings?.defaultValue
       ? field.settings?.defaultValue
       : undefined,
-    required: disableDefaultValidation ? undefined : field.required,
-    pattern: disableDefaultValidation ? undefined : field.pattern,
+    required: nativeValidation ? field.required : undefined,
+    pattern: nativeValidation
+      ? field.pattern
+        ? field.pattern
+        : undefined
+      : undefined,
+    ["aria-invalid"]: issues && issues?.length > 0 ? true : undefined,
   };
 
   const fieldName = field?.type?.name as DefaultFormFieldTypeName;
@@ -166,8 +181,8 @@ function DefaultInput({ field, context }: InputProps): React.ReactNode {
   }
 }
 
-function DefaultSubmitButton({ form }: SubmitButtonProps): React.ReactNode {
-  return <button type="submit">{form.submitLabel}</button>;
+function DefaultSubmitButton({ context }: SubmitButtonProps): React.ReactNode {
+  return <button type="submit">{context.form.submitLabel}</button>;
 }
 
 function UmbracoForm(props: UmbracoFormProps) {
@@ -193,8 +208,7 @@ function UmbracoForm(props: UmbracoFormProps) {
   };
 
   const [formData, setFormData] = useState<FormData | undefined>(undefined);
-  const [valid, setValid] = useState<boolean>(false);
-  const [issues, setIssues] = useState<ZodIssue[]>([]);
+  const [formIssues, setFormIssues] = useState<ZodIssue[]>([]);
   const handleOnChange = (e: React.ChangeEvent<HTMLFormElement>) => {
     const formData = new FormData(e.currentTarget);
     setFormData(formData);
@@ -202,11 +216,9 @@ function UmbracoForm(props: UmbracoFormProps) {
       coerceFormData(formData, config.schema),
     );
     if (parsedForm.success) {
-      setValid(true);
-      setIssues([]);
+      setFormIssues([]);
     } else {
-      setIssues(parsedForm.error.issues);
-      setValid(false);
+      setFormIssues(parsedForm.error.issues);
     }
     if (typeof onChange === "function") {
       onChange(e);
@@ -219,11 +231,9 @@ function UmbracoForm(props: UmbracoFormProps) {
       coerceFormData(formData, config.schema),
     );
     if (parsedForm.success) {
-      setValid(true);
-      setIssues([]);
+      setFormIssues([]);
     } else {
-      setIssues(parsedForm.error.issues);
-      setValid(false);
+      setFormIssues(parsedForm.error.issues);
     }
   };
 
@@ -256,29 +266,36 @@ function UmbracoForm(props: UmbracoFormProps) {
                   key={"column-" + index}
                   context={context}
                 >
-                  {column?.fields?.map((field) => (
-                    <Field
-                      field={field}
-                      key={"field-" + field?.id}
-                      context={context}
-                      condition={evaluateCondition(
-                        field,
-                        form,
-                        formData,
-                        config,
-                      )}
-                      issues={issues?.filter(
-                        // improve this
-                        (issue) => issue.path.join(".") === field.alias,
-                      )}
-                    >
-                      {
-                        // fallback to default component if custom component returns undefined
-                        Input({ field, context }) ??
-                          DefaultInput({ field, context })
-                      }
-                    </Field>
-                  ))}
+                  {column?.fields?.map((field) => {
+                    const issues = formIssues?.filter(
+                      // improve this
+                      (issue) => issue.path.join(".") === field.alias,
+                    );
+                    return (
+                      <Field
+                        field={field}
+                        key={"field-" + field?.id}
+                        context={context}
+                        condition={evaluateCondition(
+                          field,
+                          form,
+                          formData,
+                          config,
+                        )}
+                        issues={issues}
+                      >
+                        {
+                          // fallback to default component if custom component returns undefined
+                          Input({ field, issues, context }) ??
+                            DefaultInput({
+                              field,
+                              issues,
+                              context,
+                            })
+                        }
+                      </Field>
+                    );
+                  })}
                 </Column>
               ))}
             </Fieldset>
@@ -286,7 +303,7 @@ function UmbracoForm(props: UmbracoFormProps) {
         </Page>
       ))}
       {children}
-      <SubmitButton form={form} />
+      <SubmitButton context={context} />
     </Form>
   );
 }

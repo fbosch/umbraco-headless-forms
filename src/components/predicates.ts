@@ -1,4 +1,5 @@
 import type {
+  FormFieldDto,
   FieldConditionRuleOperator,
   FormDto,
   UmbracoFormConfig,
@@ -10,6 +11,18 @@ import {
   mapFieldToZod,
   parseRuleValue,
 } from "./umbraco-form-to-zod";
+
+export function showIndicator(field: FormFieldDto, form: FormDto) {
+  if (form.fieldIndicationType === "NoIndicator") {
+    return false;
+  }
+  if (form.fieldIndicationType === "MarkMandatoryFields") {
+    return field.required;
+  }
+  if (form.fieldIndicationType === "MarkOptionalFields") {
+    return !field.required;
+  }
+}
 
 export function validateConditionRules(
   dto: DtoWithCondition,

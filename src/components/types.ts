@@ -43,7 +43,7 @@ export type MapFormFieldToZod = (field?: FormFieldDto) => z.ZodTypeAny;
 export type UmbracoFormConfig = {
   schema: ReturnType<typeof umbracoFormToZod>;
   mapCustomFieldToZodType?: MapFormFieldToZod;
-  disableDefaultValidation?: boolean;
+  enableNativeValidation?: boolean;
 };
 
 export type FormContext = {
@@ -66,8 +66,6 @@ export type FormProps = {
   form: FormDto;
 } & React.FormHTMLAttributes<HTMLFormElement>;
 
-export type SubmitButtonProps = { form: FormDto };
-
 export type PageProps = RenderProps & {
   page: FormPageDto;
   condition: EvaluatedCondition;
@@ -89,3 +87,5 @@ export type FieldProps = RenderProps & {
 };
 
 export type InputProps = Omit<FieldProps, "children" | "condition">;
+
+export type SubmitButtonProps = { context: FormContext };
