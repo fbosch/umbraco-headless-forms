@@ -74,7 +74,7 @@ export function mapFieldToZod(
           break;
         } catch (e) {
           throw new Error(
-            `Unsupported field type: ${type}, please provide configuration for mapCustomField to handle this field type`,
+            `Unsupported field type: ${type}, please provide configuration for mapCustomField`,
           );
         }
       }
@@ -88,7 +88,10 @@ export function mapFieldToZod(
   return zodType;
 }
 
-export function umbracoFormToZod(form: FormDto, config?: UmbracoFormConfig) {
+export function umbracoFormToZod(
+  form: FormDto,
+  config?: Omit<UmbracoFormConfig, "schema">,
+) {
   const fields = form?.pages?.flatMap((page) =>
     page?.fieldsets?.flatMap((fieldset) =>
       fieldset?.columns?.flatMap((column) => column.fields),
@@ -126,8 +129,8 @@ export function coerceFormData(
 
 export function coerceRuleValue(def: z.ZodTypeAny, value: unknown): any {
   const baseShape = findBaseDef(def);
+
   // handle specific rule values from Umbraco
-  console.log(baseShape);
   if (baseShape instanceof ZodBoolean) {
     if (typeof value === "string") {
       switch (value) {

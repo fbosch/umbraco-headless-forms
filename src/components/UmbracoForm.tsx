@@ -1,4 +1,4 @@
-import React, { Fragment, useState, useCallback } from "react";
+import React, { Fragment, useState } from "react";
 import type {
   FormContext,
   UmbracoFormConfig,
@@ -11,6 +11,8 @@ import type {
   FieldsetProps,
   FieldProps,
   SubmitButtonProps,
+  FormConditionDto,
+  DtoWithCondition,
 } from "./types";
 import { evaluateCondition, exhaustiveCheck } from "./utils";
 import { coerceFormData, umbracoFormToZod } from "./umbraco-form-to-zod";
@@ -205,6 +207,7 @@ function DefaultSubmitButton({ context }: SubmitButtonProps): React.ReactNode {
 function UmbracoForm(props: UmbracoFormProps) {
   const {
     form,
+    config: configOverride = {},
     renderForm: Form = DefaultForm,
     renderPage: Page = DefaultPage,
     renderFieldset: Fieldset = DefaultFieldset,
@@ -215,7 +218,6 @@ function UmbracoForm(props: UmbracoFormProps) {
     children,
     onChange,
     onSubmit,
-    config: configOverride = {},
     ...rest
   } = props;
 
@@ -229,6 +231,7 @@ function UmbracoForm(props: UmbracoFormProps) {
       ...configOverride.validation,
     },
   };
+  config.schema = configOverride?.schema ?? umbracoFormToZod(form, config);
 
   const [submitAttempts, setSubmitAttempts] = useState<number>(0);
   const [formData, setFormData] = useState<FormData | undefined>(undefined);
@@ -280,6 +283,9 @@ function UmbracoForm(props: UmbracoFormProps) {
 
   const context: FormContext = { form, formData, config, submitAttempts };
 
+  const condition = (dto: DtoWithCondition) =>
+    evaluateCondition(dto, form, formData, config);
+
   return (
     <Form
       form={form}
@@ -292,14 +298,14 @@ function UmbracoForm(props: UmbracoFormProps) {
           key={"page." + index}
           page={page}
           context={context}
-          condition={evaluateCondition(page, form, formData, config)}
+          condition={condition(page)}
         >
           {page?.fieldsets?.map((fieldset, index) => (
             <Fieldset
               key={"fieldset." + index}
               fieldset={fieldset}
               context={context}
-              condition={evaluateCondition(fieldset, form, formData, config)}
+              condition={condition(fieldset)}
             >
               {fieldset?.columns?.map((column, index) => (
                 <Column
@@ -317,12 +323,7 @@ function UmbracoForm(props: UmbracoFormProps) {
                         key={"field." + field?.id}
                         field={field}
                         context={context}
-                        condition={evaluateCondition(
-                          field,
-                          form,
-                          formData,
-                          config,
-                        )}
+                        condition={condition(field)}
                         issues={issues}
                       >
                         {
