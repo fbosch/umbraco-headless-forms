@@ -14,9 +14,6 @@ function App() {
   return (
     <div className="p-4">
       <UmbracoForm
-        config={{
-          enableNativeValidation: false,
-        }}
         form={form}
         renderPage={(props) => (
           <div className="space-y-4">

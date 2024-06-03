@@ -1,4 +1,4 @@
-import React, { Fragment, useState } from "react";
+import React, { Fragment, useState, useCallback } from "react";
 import type {
   FormContext,
   UmbracoFormConfig,
@@ -102,7 +102,7 @@ function DefaultField({
 }
 
 function DefaultInput({ field, issues, context }: InputProps): React.ReactNode {
-  const { enableNativeValidation = false } = context.config ?? {};
+  const { validation } = context.config ?? {};
   const hasIssues = issues && issues?.length > 0;
 
   let common = {
@@ -116,15 +116,24 @@ function DefaultInput({ field, issues, context }: InputProps): React.ReactNode {
     defaultValue: field?.settings?.defaultValue
       ? field.settings?.defaultValue
       : undefined,
-    required: enableNativeValidation ? field.required : undefined,
-    pattern: enableNativeValidation
-      ? field.pattern
+    required:
+      validation?.enabled && validation?.native ? field.required : undefined,
+    pattern:
+      validation?.enabled && validation?.native
         ? field.pattern
-        : undefined
-      : undefined,
-    ["aria-invalid"]: hasIssues,
-    ["aria-errormessage"]: hasIssues ? issues.at(0)?.message : undefined,
+          ? field.pattern
+          : undefined
+        : undefined,
+    ["aria-invalid"]: validation?.enabled ? hasIssues : undefined,
+    ["aria-errormessage"]:
+      validation?.enabled && hasIssues ? issues.at(0)?.message : undefined,
   };
+
+  if (validation?.enabled) {
+    common = {
+      ...common,
+    };
+  }
 
   const fieldName = field?.type?.name as DefaultFormFieldTypeName;
 
@@ -213,20 +222,42 @@ function UmbracoForm(props: UmbracoFormProps) {
   const config: UmbracoFormConfig = {
     schema: umbracoFormToZod(form, configOverride as UmbracoFormConfig),
     ...configOverride,
+    validation: {
+      enabled: true,
+      native: false,
+      on: "submit",
+      ...configOverride.validation,
+    },
   };
 
+  const [submitAttempts, setSubmitAttempts] = useState<number>(0);
   const [formData, setFormData] = useState<FormData | undefined>(undefined);
   const [formIssues, setFormIssues] = useState<ZodIssue[]>([]);
+
+  const validateFormData = (formData: FormData | undefined) => {
+    if (config.validation.enabled) {
+      const parsedForm = config.schema.safeParse(
+        coerceFormData(formData, config.schema),
+      );
+      if (parsedForm.success) {
+        setFormIssues([]);
+        return true;
+      } else {
+        setFormIssues(parsedForm.error.issues);
+        return false;
+      }
+    }
+    return true;
+  };
+
   const handleOnChange = (e: React.ChangeEvent<HTMLFormElement>) => {
     const formData = new FormData(e.currentTarget);
     setFormData(formData);
-    const parsedForm = config.schema.safeParse(
-      coerceFormData(formData, config.schema),
-    );
-    if (parsedForm.success) {
-      setFormIssues([]);
-    } else {
-      setFormIssues(parsedForm.error.issues);
+    if (
+      (config.validation.on === "change" || submitAttempts > 0) &&
+      validateFormData(formData) === false
+    ) {
+      return;
     }
     if (typeof onChange === "function") {
       onChange(e);
@@ -235,17 +266,19 @@ function UmbracoForm(props: UmbracoFormProps) {
 
   const handleOnSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    const parsedForm = config.schema.safeParse(
-      coerceFormData(formData, config.schema),
-    );
-    if (parsedForm.success) {
-      setFormIssues([]);
-    } else {
-      setFormIssues(parsedForm.error.issues);
+    setSubmitAttempts((prev) => prev + 1);
+    if (
+      config.validation.on === "submit" &&
+      validateFormData(new FormData(e.currentTarget)) === false
+    ) {
+      return;
+    }
+    if (typeof onSubmit === "function") {
+      onSubmit(e);
     }
   };
 
-  const context: FormContext = { form, formData, config };
+  const context: FormContext = { form, formData, config, submitAttempts };
 
   return (
     <Form

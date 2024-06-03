@@ -40,16 +40,24 @@ export type DefaultFormFieldTypeName =
 
 export type MapFormFieldToZod = (field?: FormFieldDto) => z.ZodTypeAny;
 
+export type ValidationConfig = {
+  native: boolean;
+  enabled: boolean;
+  on: "submit" | "change";
+};
+
 export type UmbracoFormConfig = {
   schema: ReturnType<typeof umbracoFormToZod>;
   mapCustomFieldToZodType?: MapFormFieldToZod;
   enableNativeValidation?: boolean;
+  validation: ValidationConfig;
 };
 
 export type FormContext = {
   form: FormDto;
   formData: FormData | undefined;
   config: UmbracoFormConfig;
+  submitAttempts: number;
 };
 
 export type RenderProps = {

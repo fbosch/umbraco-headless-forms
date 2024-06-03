@@ -36,7 +36,7 @@ export function validateConditionRules(
   const appliedRules = rules.map((rule): boolean => {
     const operator = rule.operator as FieldConditionRuleOperator;
     const targetField = getFieldById(form, rule.field);
-    const zodType = mapFieldToZod(targetField, config);
+    const zodType = mapFieldToZod(targetField, config.mapCustomFieldToZodType);
     const parsedFormData = coerceFormData(formData, config.schema);
     const alias = targetField?.alias as string;
     const fieldValue = parsedFormData[alias];

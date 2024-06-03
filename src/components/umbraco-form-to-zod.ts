@@ -20,11 +20,12 @@ import type {
   FormDto,
   DefaultFormFieldTypeName,
   UmbracoFormConfig,
+  MapFormFieldToZod,
 } from "./types";
 
 export function mapFieldToZod(
   field?: FormFieldDto,
-  config?: UmbracoFormConfig,
+  mapCustomFieldToZodType?: MapFormFieldToZod,
 ): z.ZodTypeAny {
   let zodType;
   const type = field?.type?.name as DefaultFormFieldTypeName;
@@ -50,15 +51,25 @@ export function mapFieldToZod(
     case "Data Consent":
     case "Recaptcha2":
     case "Recaptcha v3 with score":
-      zodType = z.boolean({
-        required_error: field?.requiredErrorMessage,
-        coerce: true,
-      });
-      break;
+      return z
+        .boolean({
+          coerce: true,
+        })
+        .refine(
+          (value) => {
+            if (field?.required === true) {
+              return value === true;
+            }
+            return !!value;
+          },
+          {
+            message: field?.requiredErrorMessage,
+          },
+        );
     default:
-      if (typeof config?.mapCustomFieldToZodType === "function") {
+      if (typeof mapCustomFieldToZodType === "function") {
         try {
-          zodType = config.mapCustomFieldToZodType(field);
+          zodType = mapCustomFieldToZodType(field);
           if (!zodType) throw new Error("Mapped type is undefined");
           break;
         } catch (e) {
@@ -89,7 +100,7 @@ export function umbracoFormToZod(form: FormDto, config?: UmbracoFormConfig) {
       if (!field?.alias) return acc;
       return {
         ...acc,
-        [field.alias]: mapFieldToZod(field, config),
+        [field.alias]: mapFieldToZod(field, config?.mapCustomFieldToZodType),
       };
     },
     {},
@@ -114,8 +125,9 @@ export function coerceFormData(
 }
 
 export function coerceRuleValue(def: z.ZodTypeAny, value: unknown): any {
-  const baseShape = findBaseShape(def);
+  const baseShape = findBaseDef(def);
   // handle specific rule values from Umbraco
+  console.log(baseShape);
   if (baseShape instanceof ZodBoolean) {
     if (typeof value === "string") {
       switch (value) {
@@ -132,14 +144,14 @@ export function coerceRuleValue(def: z.ZodTypeAny, value: unknown): any {
   return value;
 }
 
-/** recursively find the base shape definition for a given ZodType */
-function findBaseShape(def: ZodTypeAny) {
+/** recursively find the base definition for a given ZodType */
+function findBaseDef(def: ZodTypeAny) {
   if (def instanceof ZodOptional || def instanceof ZodDefault) {
-    return findBaseShape(def._def.innerType);
+    return findBaseDef(def._def.innerType);
   } else if (def instanceof ZodArray) {
-    return findBaseShape(def.element);
+    return findBaseDef(def.element);
   } else if (def instanceof ZodEffects) {
-    return findBaseShape(def._def.schema);
+    return findBaseDef(def._def.schema);
   }
   return def;
 }
