@@ -1,7 +1,7 @@
 import type {
   FieldConditionRuleOperator,
   FormDto,
-  FormFieldDto,
+  UmbracoFormConfig,
   DtoWithCondition,
 } from "./types";
 import { getFieldById } from "./utils";
@@ -11,6 +11,7 @@ export function areConditionsMet(
   dto: DtoWithCondition,
   form: FormDto,
   formData: FormData | undefined,
+  config?: UmbracoFormConfig,
 ) {
   const rules = dto?.condition?.rules;
   if (!rules || rules.length === 0) return true;
@@ -24,7 +25,9 @@ export function areConditionsMet(
   const appliedRules = rules.map((rule): boolean => {
     const operator = rule.operator as FieldConditionRuleOperator;
     const targetField = getFieldById(form, rule.field);
-    const zodType = mapFieldToZod(targetField);
+    const zodType = mapFieldToZod(targetField, config);
+
+    console.log(zodType);
 
     const alias = targetField?.alias as string;
     const fieldValue = formData?.get(alias);

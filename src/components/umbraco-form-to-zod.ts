@@ -1,12 +1,19 @@
 import { z } from "zod";
-import type { FormFieldDto, FormDto, MapFormFieldToZod } from "./types";
+import { exhaustiveCheck } from "./utils";
+import type {
+  FormFieldDto,
+  FormDto,
+  MapFormFieldToZod,
+  DefaultFormFieldTypeName,
+  UmbracoFormConfig,
+} from "./types";
 
 export function mapFieldToZod(
   field?: FormFieldDto,
-  mapCustomFieldToZodType?: MapFormFieldToZod,
+  config?: UmbracoFormConfig,
 ): z.ZodTypeAny {
   let zodType;
-  const type = field?.type?.name;
+  const type = field?.type?.name as DefaultFormFieldTypeName;
 
   switch (type) {
     case "Short answer":
@@ -34,17 +41,18 @@ export function mapFieldToZod(
       });
       break;
     default:
-      if (typeof mapCustomFieldToZodType === "function") {
+      if (typeof config?.mapCustomFieldToZodType === "function") {
         try {
-          zodType = mapCustomFieldToZodType(field);
+          zodType = config.mapCustomFieldToZodType(field);
+          if (!zodType) throw new Error("Mapped type is undefined");
           break;
         } catch (e) {
-          console.error("Error mapping custom field", field, e);
+          throw new Error(
+            `Unsupported field type: ${type}, please provide configuration for mapCustomField to handle this field type`,
+          );
         }
       }
-      throw new Error(
-        `Unsupported field type: ${type}, please provide configuration for mapCustomField to handle this field type`,
-      );
+      return exhaustiveCheck(type);
   }
 
   if (field?.required === false) {
@@ -73,7 +81,7 @@ export function umbracoFormToZod(
       if (!field?.alias) return acc;
       return {
         ...acc,
-        [field.alias]: mapFieldToZod(field, config?.mapCustomFieldToZodType),
+        [field.alias]: mapFieldToZod(field, config),
       };
     },
     {},

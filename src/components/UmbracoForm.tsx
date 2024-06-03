@@ -9,7 +9,7 @@ import type {
   AppliedCondition,
   UmbracoFormConfig,
 } from "./types";
-import { applyCondition } from "./utils";
+import { applyCondition, exhaustiveCheck } from "./utils";
 
 type ConditionalRenderProps = {
   condition: AppliedCondition;
@@ -133,10 +133,6 @@ function DefaultInput({ field }: InputProps): React.ReactNode {
   };
 
   const fieldName = field?.type?.name as DefaultFormFieldTypeName;
-
-  function exhaustiveCheck(value: never): never {
-    throw new Error("Exhaustive check failed for field type: " + value);
-  }
 
   switch (fieldName) {
     case "Short answer":
