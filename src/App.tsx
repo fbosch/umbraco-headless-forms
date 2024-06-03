@@ -1,18 +1,18 @@
 import "./App.css";
 import UmbracoForm from "./components/UmbracoForm";
-import { z } from "zod";
 import { fromError } from "zod-validation-error";
 import { umbracoFormToZod } from "./components/umbraco-form-to-zod";
-import type { UmbracoFormDefinition } from "./components/umbraco-form.types";
 import formData from "./form-data";
+import { FormDto } from "./components/types";
 
-const schema = umbracoFormToZod(formData as UmbracoFormDefinition);
+const data = formData as unknown as FormDto;
+const schema = umbracoFormToZod(data);
 
 function App() {
   return (
     <div className="p-4">
       <UmbracoForm
-        form={formData as UmbracoFormDefinition}
+        form={data}
         renderPage={(props) => (
           <div className="space-y-4">
             {props.page.caption ? (
@@ -40,23 +40,7 @@ function App() {
         onChange={(e) => {
           const form = e.currentTarget as HTMLFormElement;
           const formData = new FormData(form);
-          let values: z.infer<typeof schema> = {};
-
-          // TODO: find a way to parse form data using the zod schema to handle boolean values etc.
-
-          // for (const key of Object.keys(schema.shape)) {
-          //   if (schema.shape[key]?._def.typeName === "ZodBoolean") {
-          //     values[key] = formData.get(key) === "" ? true : false;
-          //     continue;
-          //   }
-          //
-          //   values[key] = formData.get(key);
-          // }
-
-          console.log(schema);
-
-          console.log(values);
-
+          const values = Object.fromEntries(formData.entries());
           try {
             schema.parse(values);
           } catch (error) {

@@ -1,16 +1,16 @@
 import React, { Fragment, useId } from "react";
 import type {
-  UmbracoFormDefinition,
+  DefaultFormFieldTypeName,
+  FormDto,
   FormPageDto,
   FormFieldsetDto,
   FormFieldsetColumnDto,
   FormFieldDto,
-} from "./umbraco-form.types";
-import { umbracoFormToZod } from "./umbraco-form-to-zod";
+} from "./types";
 
 type RenderProps = {
   children: React.ReactNode;
-  form: UmbracoFormDefinition;
+  form: FormDto;
 } & (
   | {
       page: FormPageDto;
@@ -27,19 +27,25 @@ type RenderProps = {
 );
 
 type FormProps = {
-  form: UmbracoFormDefinition;
+  form: FormDto;
 } & React.FormHTMLAttributes<HTMLFormElement>;
-type RenderSubmitButtonProps = { form: UmbracoFormDefinition };
+type RenderSubmitButtonProps = { form: FormDto };
 type PageProps = RenderProps & { page: FormPageDto };
-type FieldsetProps = RenderProps & { fieldset: FormFieldsetDto };
-type ColumnProps = RenderProps & { column: FormFieldsetColumnDto };
-type FieldProps = RenderProps & { field: FormFieldDto };
+type FieldsetProps = RenderProps & {
+  fieldset: FormFieldsetDto;
+};
+type ColumnProps = RenderProps & {
+  column: FormFieldsetColumnDto;
+};
+type FieldProps = RenderProps & {
+  field: FormFieldDto;
+};
 type InputProps = Omit<FieldProps, "children">;
 
 export interface UmbracoFormProps
   extends React.FormHTMLAttributes<HTMLFormElement> {
   requestToken?: string;
-  form: UmbracoFormDefinition;
+  form: FormDto;
   renderForm?: (props: FormProps) => React.ReactNode;
   renderPage?: (props: PageProps) => React.ReactNode;
   renderFieldset?: (props: FieldsetProps) => React.ReactNode;
@@ -109,11 +115,13 @@ function DefaultInput({ field }: InputProps): React.ReactNode {
       : undefined,
   };
 
+  const fieldName = field?.type?.name as DefaultFormFieldTypeName;
+
   function exhaustiveCheck(value: never): never {
-    throw new Error("Exhaustive check failed for value: " + value);
+    throw new Error("Exhaustive check failed for field type: " + value);
   }
 
-  switch (field.type.name) {
+  switch (fieldName) {
     case "Short answer":
       return <input type={field?.settings?.fieldType || "text"} {...common} />;
     case "Long answer":
@@ -141,8 +149,11 @@ function DefaultInput({ field }: InputProps): React.ReactNode {
       );
     case "Dropdown":
       return (
-        <select {...common} multiple={field.settings?.allowMultipleSelections}>
-          {field.preValues.map((preValue) => (
+        <select
+          {...common}
+          multiple={!!field?.settings?.allowMultipleSelections ?? false}
+        >
+          {field?.preValues?.map((preValue) => (
             <option
               key={common.id + "-" + preValue.value}
               value={preValue.value}
@@ -159,7 +170,7 @@ function DefaultInput({ field }: InputProps): React.ReactNode {
         <input
           type="file"
           {...common}
-          accept={field.fileUploadOptions?.allowedUploadExtensions.join(",")}
+          accept={field?.fileUploadOptions?.allowedUploadExtensions?.join(",")}
         />
       );
     case "Recaptcha2":
@@ -167,7 +178,7 @@ function DefaultInput({ field }: InputProps): React.ReactNode {
     case "Recaptcha v3 with score":
       return <input type="hidden" {...common} />;
     default:
-      return exhaustiveCheck(field.type.name);
+      return exhaustiveCheck(fieldName);
   }
 }
 
@@ -192,25 +203,23 @@ function UmbracoForm(props: UmbracoFormProps) {
     ...rest
   } = props;
 
-  const schema = umbracoFormToZod(form);
-
   return (
     <Form form={form} {...rest}>
-      {form.pages.map((page, index) => (
+      {form?.pages?.map((page, index) => (
         <Page page={page} key={id + "-page-" + index} form={form}>
-          {page.fieldsets.map((fieldset, index) => (
+          {page?.fieldsets?.map((fieldset, index) => (
             <Fieldset
               fieldset={fieldset}
               key={id + "-fieldset-" + index}
               form={form}
             >
-              {fieldset.columns.map((column, index) => (
+              {fieldset?.columns?.map((column, index) => (
                 <Column
                   column={column}
                   key={id + "-column-" + index}
                   form={form}
                 >
-                  {column.fields.map((field, index) => (
+                  {column?.fields?.map((field, index) => (
                     <Field
                       field={field}
                       key={id + "-field-" + index}
