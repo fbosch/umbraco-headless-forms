@@ -43,11 +43,18 @@ export type MapFormFieldToZod = (field?: FormFieldDto) => z.ZodTypeAny;
 export type UmbracoFormConfig = {
   schema: ReturnType<typeof umbracoFormToZod>;
   mapCustomFieldToZodType?: MapFormFieldToZod;
+  disableDefaultValidation?: boolean;
+};
+
+export type FormContext = {
+  form: FormDto;
+  formData: FormData | undefined;
+  config: UmbracoFormConfig;
 };
 
 export type RenderProps = {
   children: React.ReactNode;
-  form: FormDto;
+  context: FormContext;
 } & (
   | { page: FormPageDto; condition: EvaluatedCondition }
   | { fieldset: FormFieldsetDto; condition: EvaluatedCondition }
@@ -78,6 +85,7 @@ export type ColumnProps = RenderProps & {
 export type FieldProps = RenderProps & {
   field: FormFieldDto;
   condition: EvaluatedCondition;
+  issues?: z.ZodIssue[];
 };
 
 export type InputProps = Omit<FieldProps, "children" | "condition">;

@@ -24,12 +24,11 @@ export function validateConditionRules(
     const operator = rule.operator as FieldConditionRuleOperator;
     const targetField = getFieldById(form, rule.field);
     const zodType = mapFieldToZod(targetField, config);
-    const parsedFormData = coerceFormData(formData, config?.schema);
+    const parsedFormData = coerceFormData(formData, config.schema);
 
     const alias = targetField?.alias as string;
     const fieldValue = parsedFormData[alias];
     const ruleValue = parseRuleValue(zodType, rule.value);
-    console.log(parsedFormData, alias, fieldValue, ruleValue);
 
     switch (operator) {
       case "Is":

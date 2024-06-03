@@ -10,15 +10,17 @@ import type {
   FieldsetProps,
   FieldProps,
   SubmitButtonProps,
+  FormContext,
 } from "./types";
 import { evaluateCondition, exhaustiveCheck } from "./utils";
-import { umbracoFormToZod } from "./umbraco-form-to-zod";
+import { coerceFormData, umbracoFormToZod } from "./umbraco-form-to-zod";
+import { ZodIssue } from "zod-validation-error";
 
 export interface UmbracoFormProps
   extends React.FormHTMLAttributes<HTMLFormElement> {
   requestToken?: string;
   form: FormDto;
-  config?: UmbracoFormConfig;
+  config?: Partial<UmbracoFormConfig>;
   renderForm?: (props: FormProps) => React.ReactNode;
   renderPage?: (props: PageProps) => React.ReactNode;
   renderFieldset?: (props: FieldsetProps) => React.ReactNode;
@@ -84,20 +86,21 @@ function DefaultField({
   );
 }
 
-function DefaultInput({ field }: InputProps): React.ReactNode {
-  const common = {
+function DefaultInput({ field, context }: InputProps): React.ReactNode {
+  const { disableDefaultValidation = false } = context.config ?? {};
+  let common = {
     name: field.alias,
     id: field.id,
-    required: field.required,
     placeholder: field.placeholder ? field.placeholder : undefined,
     title: field.caption ? field.caption : undefined,
     autoComplete: field?.settings?.autocompleteAttribute
       ? field.settings?.autocompleteAttribute
       : undefined,
-    pattern: field.pattern ? field.pattern : undefined,
     defaultValue: field?.settings?.defaultValue
       ? field.settings?.defaultValue
       : undefined,
+    required: disableDefaultValidation ? undefined : field.required,
+    pattern: disableDefaultValidation ? undefined : field.pattern,
   };
 
   const fieldName = field?.type?.name as DefaultFormFieldTypeName;
@@ -179,58 +182,100 @@ function UmbracoForm(props: UmbracoFormProps) {
     renderSubmit: SubmitButton = DefaultSubmitButton,
     children,
     onChange,
-    config: configOverride,
+    onSubmit,
+    config: configOverride = {},
     ...rest
   } = props;
 
   const config: UmbracoFormConfig = {
-    schema: umbracoFormToZod(form, configOverride),
+    schema: umbracoFormToZod(form, configOverride as UmbracoFormConfig),
     ...configOverride,
   };
+
   const [formData, setFormData] = useState<FormData | undefined>(undefined);
+  const [valid, setValid] = useState<boolean>(false);
+  const [issues, setIssues] = useState<ZodIssue[]>([]);
+  const handleOnChange = (e: React.ChangeEvent<HTMLFormElement>) => {
+    const formData = new FormData(e.currentTarget);
+    setFormData(formData);
+    const parsedForm = config.schema.safeParse(
+      coerceFormData(formData, config.schema),
+    );
+    if (parsedForm.success) {
+      setValid(true);
+      setIssues([]);
+    } else {
+      setIssues(parsedForm.error.issues);
+      setValid(false);
+    }
+    if (typeof onChange === "function") {
+      onChange(e);
+    }
+  };
+
+  const handleOnSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const parsedForm = config.schema.safeParse(
+      coerceFormData(formData, config.schema),
+    );
+    if (parsedForm.success) {
+      setValid(true);
+      setIssues([]);
+    } else {
+      setIssues(parsedForm.error.issues);
+      setValid(false);
+    }
+  };
+
+  const context: FormContext = { form, formData, config };
 
   return (
     <Form
       form={form}
       {...rest}
-      onChange={(e) => {
-        setFormData(new FormData(e.currentTarget));
-        if (typeof onChange === "function") {
-          onChange(e);
-        }
-      }}
+      onChange={handleOnChange}
+      onSubmit={handleOnSubmit}
     >
       {form?.pages?.map((page, index) => (
         <Page
           page={page}
           key={"page-" + index}
-          form={form}
+          context={context}
           condition={evaluateCondition(page, form, formData, config)}
         >
           {page?.fieldsets?.map((fieldset, index) => (
             <Fieldset
               fieldset={fieldset}
               key={"fieldset-" + index}
-              form={form}
+              context={context}
               condition={evaluateCondition(fieldset, form, formData, config)}
             >
               {fieldset?.columns?.map((column, index) => (
-                <Column column={column} key={"column-" + index} form={form}>
+                <Column
+                  column={column}
+                  key={"column-" + index}
+                  context={context}
+                >
                   {column?.fields?.map((field) => (
                     <Field
                       field={field}
                       key={"field-" + field?.id}
-                      form={form}
+                      context={context}
                       condition={evaluateCondition(
                         field,
                         form,
                         formData,
                         config,
                       )}
+                      issues={issues?.filter(
+                        // improve this
+                        (issue) => issue.path.join(".") === field.alias,
+                      )}
                     >
                       {
                         // fallback to default component if custom component returns undefined
-                        Input({ field, form }) ?? DefaultInput({ field, form })
+                        Input({ field, context }) ??
+                          DefaultInput({ field, context })
                       }
                     </Field>
                   ))}

@@ -37,15 +37,13 @@ function App() {
           e.preventDefault();
           const form = e.target as HTMLFormElement;
           const formData = new FormData(form);
-          console.log(Object.fromEntries(formData.entries()));
+          const values = coerceFormData(formData, schema);
+          console.log("submit", values);
         }}
         onChange={(e) => {
           const form = e.currentTarget as HTMLFormElement;
           const formData = new FormData(form);
-
-          const values = Object.fromEntries(formData.entries());
-
-          const coercedValues = coerceFormData(formData, schema);
+          // const values = coerceFormData(formData, schema);
 
           // try {
           //   schema.parse(values);

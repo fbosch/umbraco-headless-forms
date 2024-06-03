@@ -37,6 +37,7 @@ export function mapFieldToZod(
     case "Dropdown":
       zodType = z.string({
         required_error: field?.requiredErrorMessage ?? "Required",
+        coerce: true,
       });
       if (field?.pattern) {
         const regex = new RegExp(field.pattern);
