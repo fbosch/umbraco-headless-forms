@@ -1,4 +1,4 @@
-import React, { Fragment, useId } from "react";
+import React, { Fragment, useState } from "react";
 import type {
   DefaultFormFieldTypeName,
   FormDto,
@@ -6,46 +6,51 @@ import type {
   FormFieldsetDto,
   FormFieldsetColumnDto,
   FormFieldDto,
+  AppliedCondition,
+  UmbracoFormConfig,
 } from "./types";
+import { applyCondition } from "./utils";
+
+type ConditionalRenderProps = {
+  condition: AppliedCondition;
+};
 
 type RenderProps = {
   children: React.ReactNode;
   form: FormDto;
 } & (
-  | {
-      page: FormPageDto;
-    }
-  | {
-      fieldset: FormFieldsetDto;
-    }
-  | {
-      column: FormFieldsetColumnDto;
-    }
-  | {
-      field: FormFieldDto;
-    }
+  | ({ page: FormPageDto } & ConditionalRenderProps)
+  | ({ fieldset: FormFieldsetDto } & ConditionalRenderProps)
+  | { column: FormFieldsetColumnDto }
+  | ({ field: FormFieldDto } & ConditionalRenderProps)
 );
 
 type FormProps = {
   form: FormDto;
 } & React.FormHTMLAttributes<HTMLFormElement>;
 type RenderSubmitButtonProps = { form: FormDto };
-type PageProps = RenderProps & { page: FormPageDto };
+type PageProps = RenderProps & {
+  page: FormPageDto;
+  condition: AppliedCondition;
+};
 type FieldsetProps = RenderProps & {
   fieldset: FormFieldsetDto;
+  condition: AppliedCondition;
 };
 type ColumnProps = RenderProps & {
   column: FormFieldsetColumnDto;
 };
 type FieldProps = RenderProps & {
   field: FormFieldDto;
+  condition: AppliedCondition;
 };
-type InputProps = Omit<FieldProps, "children">;
+type InputProps = Omit<FieldProps, "children" | "condition">;
 
 export interface UmbracoFormProps
   extends React.FormHTMLAttributes<HTMLFormElement> {
   requestToken?: string;
   form: FormDto;
+  config?: UmbracoFormConfig;
   renderForm?: (props: FormProps) => React.ReactNode;
   renderPage?: (props: PageProps) => React.ReactNode;
   renderFieldset?: (props: FieldsetProps) => React.ReactNode;
@@ -59,7 +64,12 @@ function DefaultForm({ form, ...rest }: FormProps): React.ReactNode {
   return <form {...rest} id={"form-" + form.id} name={form.id} />;
 }
 
-function DefaultPage({ page, children }: PageProps): React.ReactNode {
+function DefaultPage({
+  page,
+  children,
+  condition,
+}: PageProps): React.ReactNode {
+  if (condition.hide) return null;
   return (
     <Fragment>
       {page.caption ? <h2>{page.caption}</h2> : null}
@@ -71,7 +81,9 @@ function DefaultPage({ page, children }: PageProps): React.ReactNode {
 function DefaultFieldset({
   fieldset,
   children,
+  condition,
 }: FieldsetProps): React.ReactNode {
+  if (condition.hide) return null;
   return (
     <Fragment>
       {fieldset.caption ? <h3>{fieldset.caption}</h3> : null}
@@ -89,7 +101,12 @@ function DefaultColumn({ column, children }: ColumnProps): React.ReactNode {
   );
 }
 
-function DefaultField({ field, children }: FieldProps): React.ReactNode {
+function DefaultField({
+  field,
+  children,
+  condition,
+}: FieldProps): React.ReactNode {
+  if (condition.hide) return null;
   return (
     <Fragment>
       <label htmlFor={field.id}>{field.caption}</label>
@@ -189,7 +206,6 @@ function DefaultSubmitButton({
 }
 
 function UmbracoForm(props: UmbracoFormProps) {
-  const id = useId();
   const {
     form,
     renderForm: Form = DefaultForm,
@@ -200,30 +216,45 @@ function UmbracoForm(props: UmbracoFormProps) {
     renderInput: Input = DefaultInput,
     renderSubmit: SubmitButton = DefaultSubmitButton,
     children,
+    onChange,
     ...rest
   } = props;
 
+  const [formData, setFormData] = useState<FormData | undefined>(undefined);
+
   return (
-    <Form form={form} {...rest}>
+    <Form
+      form={form}
+      {...rest}
+      onChange={(e) => {
+        setFormData(new FormData(e.currentTarget));
+        if (typeof onChange === "function") {
+          onChange(e);
+        }
+      }}
+    >
       {form?.pages?.map((page, index) => (
-        <Page page={page} key={id + "-page-" + index} form={form}>
+        <Page
+          page={page}
+          key={"page-" + index}
+          form={form}
+          condition={applyCondition(page, form, formData)}
+        >
           {page?.fieldsets?.map((fieldset, index) => (
             <Fieldset
               fieldset={fieldset}
-              key={id + "-fieldset-" + index}
+              key={"fieldset-" + index}
               form={form}
+              condition={applyCondition(fieldset, form, formData)}
             >
               {fieldset?.columns?.map((column, index) => (
-                <Column
-                  column={column}
-                  key={id + "-column-" + index}
-                  form={form}
-                >
-                  {column?.fields?.map((field, index) => (
+                <Column column={column} key={"column-" + index} form={form}>
+                  {column?.fields?.map((field) => (
                     <Field
                       field={field}
-                      key={id + "-field-" + index}
+                      key={"field-" + field?.id}
                       form={form}
+                      condition={applyCondition(field, form, formData)}
                     >
                       {
                         // fallback to default component if custom component returns undefined

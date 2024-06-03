@@ -1,11 +1,9 @@
 import { z } from "zod";
-import type { FormFieldDto, FormDto } from "./types";
+import type { FormFieldDto, FormDto, MapFormFieldToZod } from "./types";
 
-type MapFormFieldToZod = (field?: FormFieldDto) => z.ZodTypeAny;
-
-function mapFieldToZod(
+export function mapFieldToZod(
   field?: FormFieldDto,
-  mapCustomField?: MapFormFieldToZod,
+  mapCustomFieldToZodType?: MapFormFieldToZod,
 ): z.ZodTypeAny {
   let zodType;
   const type = field?.type?.name;
@@ -36,9 +34,9 @@ function mapFieldToZod(
       });
       break;
     default:
-      if (typeof mapCustomField === "function") {
+      if (typeof mapCustomFieldToZodType === "function") {
         try {
-          zodType = mapCustomField(field);
+          zodType = mapCustomFieldToZodType(field);
           break;
         } catch (e) {
           console.error("Error mapping custom field", field, e);
@@ -57,7 +55,7 @@ function mapFieldToZod(
 }
 
 export type UmbracoFormToZodConfig = {
-  mapCustomField?: MapFormFieldToZod;
+  mapCustomFieldToZodType?: MapFormFieldToZod;
 };
 
 export function umbracoFormToZod(
@@ -75,7 +73,7 @@ export function umbracoFormToZod(
       if (!field?.alias) return acc;
       return {
         ...acc,
-        [field.alias]: mapFieldToZod(field, config?.mapCustomField),
+        [field.alias]: mapFieldToZod(field, config?.mapCustomFieldToZodType),
       };
     },
     {},

@@ -2,10 +2,10 @@ import "./App.css";
 import UmbracoForm from "./components/UmbracoForm";
 import { fromError } from "zod-validation-error";
 import { umbracoFormToZod } from "./components/umbraco-form-to-zod";
-import formData from "./form-data";
+import formDefinition from "./form-definition";
 import { FormDto } from "./components/types";
 
-const data = formData as unknown as FormDto;
+const data = formDefinition as unknown as FormDto;
 const schema = umbracoFormToZod(data);
 
 function App() {

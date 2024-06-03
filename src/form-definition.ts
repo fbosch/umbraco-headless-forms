@@ -251,7 +251,7 @@ export default {
                 {
                   alias: "moreInfo",
                   caption: "More info",
-                  cmndition: {
+                  condition: {
                     actionType: "Show",
                     logicType: "All",
                     rules: [
