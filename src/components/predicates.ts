@@ -4,108 +4,107 @@ import type {
   UmbracoFormConfig,
   DtoWithCondition,
 } from "./types";
-import { getFieldById } from "./utils";
-import { mapFieldToZod } from "./umbraco-form-to-zod";
+import { getFieldById, exhaustiveCheck } from "./utils";
+import {
+  coerceFormData,
+  mapFieldToZod,
+  parseRuleValue,
+} from "./umbraco-form-to-zod";
 
-export function areConditionsMet(
+export function validateConditionRules(
   dto: DtoWithCondition,
   form: FormDto,
   formData: FormData | undefined,
-  config?: UmbracoFormConfig,
+  config: UmbracoFormConfig,
 ) {
   const rules = dto?.condition?.rules;
   if (!rules || rules.length === 0) return true;
-
-  function exhaustiveCheck(value: never): never {
-    throw new Error(
-      "Exhaustive check failed for field condition rule: " + value,
-    );
-  }
 
   const appliedRules = rules.map((rule): boolean => {
     const operator = rule.operator as FieldConditionRuleOperator;
     const targetField = getFieldById(form, rule.field);
     const zodType = mapFieldToZod(targetField, config);
-
-    console.log(zodType);
+    const parsedFormData = coerceFormData(formData, config?.schema);
 
     const alias = targetField?.alias as string;
-    const fieldValue = formData?.get(alias);
+    const fieldValue = parsedFormData[alias];
+    const ruleValue = parseRuleValue(zodType, rule.value);
+    console.log(parsedFormData, alias, fieldValue, ruleValue);
 
     switch (operator) {
       case "Is":
-        return fieldValue === rule.value;
+        return fieldValue === ruleValue;
       case "IsNot":
-        return fieldValue !== rule.value;
+        return fieldValue !== ruleValue;
       case "GreaterThen":
-        return fieldValue && rule.value ? fieldValue > rule.value : false;
+        return fieldValue && ruleValue ? fieldValue > ruleValue : false;
       case "LessThen":
-        return fieldValue && rule.value ? fieldValue < rule.value : false;
+        return fieldValue && ruleValue ? fieldValue < ruleValue : false;
       case "Contains":
-        return fieldValue && rule.value
-          ? fieldValue.toString().includes(rule.value)
+        return fieldValue && ruleValue
+          ? fieldValue.toString().includes(ruleValue)
           : false;
       case "ContainsIgnoreCase":
-        return fieldValue && rule.value
+        return fieldValue && ruleValue
           ? fieldValue
               .toString()
               .toLowerCase()
-              .includes(rule.value.toLowerCase())
+              .includes(ruleValue?.toLowerCase())
           : false;
       case "StartsWith":
-        return fieldValue && rule.value
-          ? fieldValue.toString().startsWith(rule.value)
+        return fieldValue && ruleValue
+          ? fieldValue.toString().startsWith(ruleValue)
           : false;
       case "StartsWithIgnoreCase":
-        return fieldValue && rule.value
+        return fieldValue && ruleValue
           ? fieldValue
               .toString()
               .toLowerCase()
-              .startsWith(rule.value.toLowerCase())
+              .startsWith(ruleValue.toLowerCase())
           : false;
       case "EndsWith":
-        return fieldValue && rule.value
-          ? fieldValue.toString().endsWith(rule.value)
+        return fieldValue && ruleValue
+          ? fieldValue.toString().endsWith(ruleValue)
           : false;
       case "EndsWithIgnoreCase":
-        return fieldValue && rule.value
+        return fieldValue && ruleValue
           ? fieldValue
               .toString()
               .toLowerCase()
-              .endsWith(rule.value.toLowerCase())
+              .endsWith(ruleValue.toLowerCase())
           : false;
       case "NotContains":
-        return fieldValue && rule.value
-          ? !fieldValue.toString().includes(rule.value)
+        return fieldValue && ruleValue
+          ? !fieldValue.toString().includes(ruleValue)
           : false;
       case "NotContainsIgnoreCase":
-        return fieldValue && rule.value
+        return fieldValue && ruleValue
           ? !fieldValue
               .toString()
               .toLowerCase()
-              .includes(rule.value.toLowerCase())
+              .includes(ruleValue?.toLowerCase())
           : false;
       case "NotStartsWith":
-        return fieldValue && rule.value
-          ? !fieldValue.toString().startsWith(rule.value)
+        return fieldValue && ruleValue
+          ? !fieldValue.toString().startsWith(ruleValue)
           : false;
       case "NotStartsWithIgnoreCase":
-        return fieldValue && rule.value
+        return fieldValue && ruleValue
           ? !fieldValue
               .toString()
               .toLowerCase()
-              .startsWith(rule.value.toLowerCase())
+              .startsWith(ruleValue.toLowerCase())
           : false;
       case "NotEndsWith":
-        return fieldValue && rule.value
-          ? !fieldValue.toString().endsWith(rule.value)
+        return fieldValue && ruleValue
+          ? !fieldValue.toString().endsWith(ruleValue)
           : false;
       case "NotEndsWithIgnoreCase":
-        return fieldValue && rule.value
+        return fieldValue && ruleValue
           ? !fieldValue
               .toString()
               .toLowerCase()
-              .endsWith(rule.value.toLowerCase())
+              .endsWith(ruleValue.toLowerCase())
           : false;
       default:
         return exhaustiveCheck(operator);

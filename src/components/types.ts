@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { umbracoFormToZod } from "./umbraco-form-to-zod";
 import type { components } from "./umbraco-form.d.ts";
 
 /** default schema types */
@@ -18,7 +19,8 @@ export type FieldConditionRuleOperator =
   components["schemas"]["FieldConditionRuleOperator"];
 
 export type DtoWithCondition = FormPageDto | FormFieldsetDto | FormFieldDto;
-export type AppliedCondition = {
+
+export type EvaluatedCondition = {
   show: boolean;
   hide: boolean;
   isFulfilled: boolean;
@@ -39,5 +41,43 @@ export type DefaultFormFieldTypeName =
 export type MapFormFieldToZod = (field?: FormFieldDto) => z.ZodTypeAny;
 
 export type UmbracoFormConfig = {
+  schema: ReturnType<typeof umbracoFormToZod>;
   mapCustomFieldToZodType?: MapFormFieldToZod;
 };
+
+export type RenderProps = {
+  children: React.ReactNode;
+  form: FormDto;
+} & (
+  | { page: FormPageDto; condition: EvaluatedCondition }
+  | { fieldset: FormFieldsetDto; condition: EvaluatedCondition }
+  | { column: FormFieldsetColumnDto }
+  | { field: FormFieldDto; condition: EvaluatedCondition }
+);
+
+export type FormProps = {
+  form: FormDto;
+} & React.FormHTMLAttributes<HTMLFormElement>;
+
+export type SubmitButtonProps = { form: FormDto };
+
+export type PageProps = RenderProps & {
+  page: FormPageDto;
+  condition: EvaluatedCondition;
+};
+
+export type FieldsetProps = RenderProps & {
+  fieldset: FormFieldsetDto;
+  condition: EvaluatedCondition;
+};
+
+export type ColumnProps = RenderProps & {
+  column: FormFieldsetColumnDto;
+};
+
+export type FieldProps = RenderProps & {
+  field: FormFieldDto;
+  condition: EvaluatedCondition;
+};
+
+export type InputProps = Omit<FieldProps, "children" | "condition">;

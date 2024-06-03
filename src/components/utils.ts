@@ -1,9 +1,9 @@
-import { areConditionsMet } from "./predicates";
+import { validateConditionRules } from "./predicates";
 import type {
   UmbracoFormConfig,
   FormDto,
   DtoWithCondition,
-  AppliedCondition,
+  EvaluatedCondition,
 } from "./types";
 
 export function exhaustiveCheck(value: never): never {
@@ -23,13 +23,14 @@ export function getFieldById(form: FormDto, id?: string) {
   return getAllFields(form)?.find((field) => field?.id === id);
 }
 
-export function applyCondition(
+/** get evaluated condition rules for a given page, fieldset or field */
+export function evaluateCondition(
   dto: DtoWithCondition,
   form: FormDto,
-  formData?: FormData,
-  config?: UmbracoFormConfig,
-): AppliedCondition {
-  const isFulfilled = areConditionsMet(dto, form, formData, config);
+  formData: FormData | undefined,
+  config: UmbracoFormConfig,
+): EvaluatedCondition {
+  const isFulfilled = validateConditionRules(dto, form, formData, config);
 
   if (dto?.condition?.actionType === "Show") {
     return {

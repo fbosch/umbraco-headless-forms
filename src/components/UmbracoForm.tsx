@@ -2,49 +2,17 @@ import React, { Fragment, useState } from "react";
 import type {
   DefaultFormFieldTypeName,
   FormDto,
-  FormPageDto,
-  FormFieldsetDto,
-  FormFieldsetColumnDto,
-  FormFieldDto,
-  AppliedCondition,
   UmbracoFormConfig,
+  FormProps,
+  PageProps,
+  ColumnProps,
+  InputProps,
+  FieldsetProps,
+  FieldProps,
+  SubmitButtonProps,
 } from "./types";
-import { applyCondition, exhaustiveCheck } from "./utils";
-
-type ConditionalRenderProps = {
-  condition: AppliedCondition;
-};
-
-type RenderProps = {
-  children: React.ReactNode;
-  form: FormDto;
-} & (
-  | ({ page: FormPageDto } & ConditionalRenderProps)
-  | ({ fieldset: FormFieldsetDto } & ConditionalRenderProps)
-  | { column: FormFieldsetColumnDto }
-  | ({ field: FormFieldDto } & ConditionalRenderProps)
-);
-
-type FormProps = {
-  form: FormDto;
-} & React.FormHTMLAttributes<HTMLFormElement>;
-type RenderSubmitButtonProps = { form: FormDto };
-type PageProps = RenderProps & {
-  page: FormPageDto;
-  condition: AppliedCondition;
-};
-type FieldsetProps = RenderProps & {
-  fieldset: FormFieldsetDto;
-  condition: AppliedCondition;
-};
-type ColumnProps = RenderProps & {
-  column: FormFieldsetColumnDto;
-};
-type FieldProps = RenderProps & {
-  field: FormFieldDto;
-  condition: AppliedCondition;
-};
-type InputProps = Omit<FieldProps, "children" | "condition">;
+import { evaluateCondition, exhaustiveCheck } from "./utils";
+import { umbracoFormToZod } from "./umbraco-form-to-zod";
 
 export interface UmbracoFormProps
   extends React.FormHTMLAttributes<HTMLFormElement> {
@@ -57,7 +25,7 @@ export interface UmbracoFormProps
   renderColumn?: (props: ColumnProps) => React.ReactNode;
   renderField?: (props: FieldProps) => React.ReactNode;
   renderInput?: (props: InputProps) => React.ReactNode | undefined;
-  renderSubmit?: (props: RenderSubmitButtonProps) => React.ReactNode;
+  renderSubmit?: (props: SubmitButtonProps) => React.ReactNode;
 }
 
 function DefaultForm({ form, ...rest }: FormProps): React.ReactNode {
@@ -195,9 +163,7 @@ function DefaultInput({ field }: InputProps): React.ReactNode {
   }
 }
 
-function DefaultSubmitButton({
-  form,
-}: RenderSubmitButtonProps): React.ReactNode {
+function DefaultSubmitButton({ form }: SubmitButtonProps): React.ReactNode {
   return <button type="submit">{form.submitLabel}</button>;
 }
 
@@ -213,9 +179,14 @@ function UmbracoForm(props: UmbracoFormProps) {
     renderSubmit: SubmitButton = DefaultSubmitButton,
     children,
     onChange,
+    config: configOverride,
     ...rest
   } = props;
 
+  const config: UmbracoFormConfig = {
+    schema: umbracoFormToZod(form, configOverride),
+    ...configOverride,
+  };
   const [formData, setFormData] = useState<FormData | undefined>(undefined);
 
   return (
@@ -234,14 +205,14 @@ function UmbracoForm(props: UmbracoFormProps) {
           page={page}
           key={"page-" + index}
           form={form}
-          condition={applyCondition(page, form, formData)}
+          condition={evaluateCondition(page, form, formData, config)}
         >
           {page?.fieldsets?.map((fieldset, index) => (
             <Fieldset
               fieldset={fieldset}
               key={"fieldset-" + index}
               form={form}
-              condition={applyCondition(fieldset, form, formData)}
+              condition={evaluateCondition(fieldset, form, formData, config)}
             >
               {fieldset?.columns?.map((column, index) => (
                 <Column column={column} key={"column-" + index} form={form}>
@@ -250,7 +221,12 @@ function UmbracoForm(props: UmbracoFormProps) {
                       field={field}
                       key={"field-" + field?.id}
                       form={form}
-                      condition={applyCondition(field, form, formData)}
+                      condition={evaluateCondition(
+                        field,
+                        form,
+                        formData,
+                        config,
+                      )}
                     >
                       {
                         // fallback to default component if custom component returns undefined

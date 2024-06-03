@@ -1,7 +1,9 @@
 import "./App.css";
 import UmbracoForm from "./components/UmbracoForm";
-import { fromError } from "zod-validation-error";
-import { umbracoFormToZod } from "./components/umbraco-form-to-zod";
+import {
+  umbracoFormToZod,
+  coerceFormData,
+} from "./components/umbraco-form-to-zod";
 import formDefinition from "./form-definition";
 import { FormDto } from "./components/types";
 
@@ -40,13 +42,17 @@ function App() {
         onChange={(e) => {
           const form = e.currentTarget as HTMLFormElement;
           const formData = new FormData(form);
+
           const values = Object.fromEntries(formData.entries());
-          try {
-            schema.parse(values);
-          } catch (error) {
-            const validationError = fromError(error);
-            console.log(validationError);
-          }
+
+          const coercedValues = coerceFormData(formData, schema);
+
+          // try {
+          //   schema.parse(values);
+          // } catch (error) {
+          //   const validationError = fromError(error);
+          //   console.log(validationError);
+          // }
         }}
       />
     </div>

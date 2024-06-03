@@ -1,9 +1,23 @@
 import { z } from "zod";
 import { exhaustiveCheck } from "./utils";
+import {
+  ZodLiteral,
+  ZodTypeAny,
+  ZodString,
+  ZodNumber,
+  ZodDate,
+  ZodBoolean,
+  ZodNativeEnum,
+  ZodEnum,
+  ZodOptional,
+  ZodDefault,
+  ZodArray,
+  ZodEffects,
+  ZodObject,
+} from "zod";
 import type {
   FormFieldDto,
   FormDto,
-  MapFormFieldToZod,
   DefaultFormFieldTypeName,
   UmbracoFormConfig,
 } from "./types";
@@ -62,14 +76,7 @@ export function mapFieldToZod(
   return zodType;
 }
 
-export type UmbracoFormToZodConfig = {
-  mapCustomFieldToZodType?: MapFormFieldToZod;
-};
-
-export function umbracoFormToZod(
-  form: FormDto,
-  config?: UmbracoFormToZodConfig,
-) {
+export function umbracoFormToZod(form: FormDto, config?: UmbracoFormConfig) {
   const fields = form?.pages?.flatMap((page) =>
     page?.fieldsets?.flatMap((fieldset) =>
       fieldset?.columns?.flatMap((column) => column.fields),
@@ -87,8 +94,127 @@ export function umbracoFormToZod(
     {},
   );
 
-  const schema = z.object({
-    ...mappedFields,
-  });
-  return schema;
+  return z.object({ ...mappedFields });
+}
+
+/** parses form data and coerces it to the form schema */
+export function coerceFormData(
+  formData: FormData | undefined,
+  schema: ReturnType<typeof umbracoFormToZod>,
+) {
+  let output: z.infer<typeof schema> = {};
+  if (!formData) return output;
+
+  for (let key of Object.keys(schema.shape)) {
+    parseParams(output, schema, key, formData.get(key));
+  }
+
+  return output;
+}
+
+export function parseRuleValue(def: z.ZodTypeAny, value: unknown): any {
+  const baseShape = findBaseShape(def);
+  // handle specific rule values from Umbraco
+  if (baseShape instanceof ZodBoolean) {
+    if (typeof value === "string") {
+      switch (value) {
+        case "true":
+        case "on":
+          return true;
+        case "false":
+        case "off":
+          return false;
+      }
+    }
+    return !!value; // coerce to boolean
+  }
+  return value;
+}
+
+/** recursively find the base shape definition for a given ZodType */
+function findBaseShape(def: ZodTypeAny) {
+  if (def instanceof ZodOptional || def instanceof ZodDefault) {
+    return findBaseShape(def._def.innerType);
+  } else if (def instanceof ZodArray) {
+    return findBaseShape(def.element);
+  } else if (def instanceof ZodEffects) {
+    return findBaseShape(def._def.schema);
+  }
+  return def;
+}
+
+function processDef(def: ZodTypeAny, o: any, key: string, value: string) {
+  let parsedValue: any;
+  if (def instanceof ZodString || def instanceof ZodLiteral) {
+    parsedValue = value;
+  } else if (def instanceof ZodNumber) {
+    const num = Number(value);
+    parsedValue = isNaN(num) ? value : num;
+  } else if (def instanceof ZodDate) {
+    const date = Date.parse(value);
+    parsedValue = isNaN(date) ? value : new Date(date);
+  } else if (def instanceof ZodBoolean) {
+    parsedValue =
+      value === "true" || value === ""
+        ? true
+        : value === "false"
+          ? false
+          : Boolean(value);
+  } else if (def instanceof ZodNativeEnum || def instanceof ZodEnum) {
+    parsedValue = value;
+  } else if (def instanceof ZodOptional || def instanceof ZodDefault) {
+    // def._def.innerType is the same as ZodOptional's .unwrap(), which unfortunately doesn't exist on ZodDefault
+    processDef(def._def.innerType, o, key, value);
+    // return here to prevent overwriting the result of the recursive call
+    return;
+  } else if (def instanceof ZodArray) {
+    if (o[key] === undefined) {
+      o[key] = [];
+    }
+    processDef(def.element, o, key, value);
+    // return here since recursive call will add to array
+    return;
+  } else if (def instanceof ZodEffects) {
+    processDef(def._def.schema, o, key, value);
+    return;
+  } else {
+    throw new Error(`Unexpected type ${def._def.typeName} for key ${key}`);
+  }
+  if (Array.isArray(o[key])) {
+    o[key].push(parsedValue);
+  } else {
+    o[key] = parsedValue;
+  }
+}
+
+function parseParams(o: any, schema: any, key: string, value: any) {
+  // find actual shape definition for this key
+  let shape = schema;
+  while (shape instanceof ZodObject || shape instanceof ZodEffects) {
+    shape =
+      shape instanceof ZodObject
+        ? shape.shape
+        : shape instanceof ZodEffects
+          ? shape._def.schema
+          : null;
+    if (shape === null) {
+      throw new Error(`Could not find shape for key ${key}`);
+    }
+  }
+
+  if (key.includes(".")) {
+    let [parentProp, ...rest] = key.split(".");
+    o[parentProp] = o[parentProp] ?? {};
+    parseParams(o[parentProp], shape[parentProp], rest.join("."), value);
+    return;
+  }
+  let isArray = false;
+  if (key.includes("[]")) {
+    isArray = true;
+    key = key.replace("[]", "");
+  }
+  const def = shape[key];
+  if (def) {
+    processDef(def, o, key, value as string);
+  }
 }
