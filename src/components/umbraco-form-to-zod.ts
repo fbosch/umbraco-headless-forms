@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { exhaustiveCheck } from "./utils";
+import { exhaustiveCheck, getAllFieldsFilteredByConditions } from "./utils";
 import {
   ZodLiteral,
   ZodTypeAny,
@@ -21,6 +21,7 @@ import type {
   DefaultFormFieldTypeName,
   UmbracoFormConfig,
   MapFormFieldToZod,
+  BaseSchema,
 } from "./types";
 
 export function mapFieldToZod(
@@ -112,16 +113,35 @@ export function umbracoFormToZod(
   return z.object({ ...mappedFields });
 }
 
+export function omitConditionalFields<TData extends BaseSchema>(
+  form: FormDto,
+  data: TData = {} as TData,
+  config: UmbracoFormConfig,
+) {
+  let output: Record<string, unknown> = {};
+  const allAvailableFields = getAllFieldsFilteredByConditions(
+    form,
+    data,
+    config,
+  );
+  for (let key of Object.keys(data)) {
+    if (allAvailableFields.find((field) => field.alias === key)) {
+      output[key] = data[key];
+    }
+  }
+  return output as Partial<TData>;
+}
+
 /** coerces form data to the schema format */
 export function coerceFormData(
   formData: FormData | undefined,
-  schema: ReturnType<typeof umbracoFormToZod>,
+  config: UmbracoFormConfig,
 ) {
-  let output: z.infer<typeof schema> = {};
+  let output: z.infer<typeof config.schema> = {};
   if (!formData) return output;
 
-  for (let key of Object.keys(schema.shape)) {
-    parseParams(output, schema, key, formData.get(key));
+  for (let key of Object.keys(config.schema.shape)) {
+    parseParams(output, config.schema, key, formData.get(key));
   }
 
   return output;

@@ -15,6 +15,11 @@ function App() {
     <div className="p-4">
       <UmbracoForm
         form={form}
+        config={{
+          validation: {
+            enabled: true,
+          },
+        }}
         renderPage={(props) => (
           <div className="space-y-4">
             {props.page.caption ? (

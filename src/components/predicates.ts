@@ -1,4 +1,5 @@
 import type {
+  BaseSchema,
   FormFieldDto,
   FieldConditionRuleOperator,
   FormDto,
@@ -6,11 +7,7 @@ import type {
   DtoWithCondition,
 } from "./types";
 import { getFieldById, exhaustiveCheck } from "./utils";
-import {
-  coerceFormData,
-  mapFieldToZod,
-  coerceRuleValue,
-} from "./umbraco-form-to-zod";
+import { mapFieldToZod, coerceRuleValue } from "./umbraco-form-to-zod";
 
 export function showIndicator(field: FormFieldDto, form: FormDto) {
   if (form.fieldIndicationType === "NoIndicator") {
@@ -24,10 +21,10 @@ export function showIndicator(field: FormFieldDto, form: FormDto) {
   }
 }
 
-export function validateConditionRules(
+export function validateConditionRules<TData extends BaseSchema>(
   dto: DtoWithCondition,
   form: FormDto,
-  formData: FormData | undefined,
+  data: TData,
   config: UmbracoFormConfig,
 ) {
   const rules = dto?.condition?.rules;
@@ -37,9 +34,8 @@ export function validateConditionRules(
     const operator = rule.operator as FieldConditionRuleOperator;
     const targetField = getFieldById(form, rule.field);
     const zodType = mapFieldToZod(targetField, config.mapCustomFieldToZodType);
-    const parsedFormData = coerceFormData(formData, config.schema);
     const alias = targetField?.alias as string;
-    const fieldValue = parsedFormData[alias];
+    const fieldValue = data[alias];
     const ruleValue = coerceRuleValue(zodType, rule.value);
 
     switch (operator) {

@@ -18,6 +18,8 @@ export type FieldConditionLogicType =
 export type FieldConditionRuleOperator =
   components["schemas"]["FieldConditionRuleOperator"];
 
+export type BaseSchema = z.infer<ReturnType<typeof umbracoFormToZod>>;
+
 export type DtoWithCondition = FormPageDto | FormFieldsetDto | FormFieldDto;
 
 export type EvaluatedCondition = {
@@ -50,7 +52,7 @@ export type UmbracoFormConfig = {
   schema: ReturnType<typeof umbracoFormToZod>;
   mapCustomFieldToZodType?: MapFormFieldToZod;
   enableNativeValidation?: boolean;
-  validation: ValidationConfig;
+  validation?: Partial<ValidationConfig>;
 };
 
 export type FormContext = {

@@ -1,5 +1,6 @@
-import React, { Fragment, useState } from "react";
+import React, { Fragment, useCallback, useState } from "react";
 import type {
+  BaseSchema,
   FormContext,
   UmbracoFormConfig,
   DefaultFormFieldTypeName,
@@ -11,11 +12,14 @@ import type {
   FieldsetProps,
   FieldProps,
   SubmitButtonProps,
-  FormConditionDto,
   DtoWithCondition,
 } from "./types";
 import { evaluateCondition, exhaustiveCheck } from "./utils";
-import { coerceFormData, umbracoFormToZod } from "./umbraco-form-to-zod";
+import {
+  coerceFormData,
+  umbracoFormToZod,
+  omitConditionalFields,
+} from "./umbraco-form-to-zod";
 import { ZodIssue } from "zod-validation-error";
 import { showIndicator } from "./predicates";
 
@@ -228,37 +232,48 @@ function UmbracoForm(props: UmbracoFormProps) {
       enabled: true,
       native: false,
       on: "submit",
-      ...configOverride.validation,
+      ...configOverride?.validation,
     },
   };
   config.schema = configOverride?.schema ?? umbracoFormToZod(form, config);
 
   const [submitAttempts, setSubmitAttempts] = useState<number>(0);
   const [formData, setFormData] = useState<FormData | undefined>(undefined);
+  const [data, setData] = useState<BaseSchema>({});
   const [formIssues, setFormIssues] = useState<ZodIssue[]>([]);
 
-  const validateFormData = (formData: FormData | undefined) => {
-    if (config.validation.enabled) {
-      const parsedForm = config.schema.safeParse(
-        coerceFormData(formData, config.schema),
-      );
-      if (parsedForm.success) {
-        setFormIssues([]);
-        return true;
-      } else {
-        setFormIssues(parsedForm.error.issues);
-        return false;
+  const validateFormData = useCallback(
+    (coercedData: BaseSchema) => {
+      if (config?.validation?.enabled) {
+        const dataWithConditionalFieldsOmitted = omitConditionalFields(
+          form,
+          coercedData,
+          config,
+        );
+        console.log(dataWithConditionalFieldsOmitted);
+        const parsedForm = config?.schema?.safeParse(coercedData);
+        if (parsedForm?.success) {
+          setFormIssues([]);
+          return true;
+        } else if (parsedForm?.error?.issues) {
+          setFormIssues(parsedForm.error.issues);
+          return false;
+        }
       }
-    }
-    return true;
-  };
+      return true;
+    },
+    [form, config],
+  );
 
   const handleOnChange = (e: React.ChangeEvent<HTMLFormElement>) => {
     const formData = new FormData(e.currentTarget);
+    const coercedData = coerceFormData(formData, config);
     setFormData(formData);
+    setData(coercedData);
+
     if (
-      (config.validation.on === "change" || submitAttempts > 0) &&
-      validateFormData(formData) === false
+      (config?.validation?.on === "change" || submitAttempts > 0) &&
+      validateFormData(coercedData) === false
     ) {
       return;
     }
@@ -271,8 +286,8 @@ function UmbracoForm(props: UmbracoFormProps) {
     e.preventDefault();
     setSubmitAttempts((prev) => prev + 1);
     if (
-      config.validation.on === "submit" &&
-      validateFormData(new FormData(e.currentTarget)) === false
+      config?.validation?.on === "submit" &&
+      validateFormData(data) === false
     ) {
       return;
     }
@@ -282,9 +297,10 @@ function UmbracoForm(props: UmbracoFormProps) {
   };
 
   const context: FormContext = { form, formData, config, submitAttempts };
-
-  const condition = (dto: DtoWithCondition) =>
-    evaluateCondition(dto, form, formData, config);
+  const checkCondition = useCallback(
+    (dto: DtoWithCondition) => evaluateCondition(dto, form, data, config),
+    [data, form, config],
+  );
 
   return (
     <Form
@@ -298,14 +314,14 @@ function UmbracoForm(props: UmbracoFormProps) {
           key={"page." + index}
           page={page}
           context={context}
-          condition={condition(page)}
+          condition={checkCondition(page)}
         >
           {page?.fieldsets?.map((fieldset, index) => (
             <Fieldset
               key={"fieldset." + index}
               fieldset={fieldset}
               context={context}
-              condition={condition(fieldset)}
+              condition={checkCondition(fieldset)}
             >
               {fieldset?.columns?.map((column, index) => (
                 <Column
@@ -323,7 +339,7 @@ function UmbracoForm(props: UmbracoFormProps) {
                         key={"field." + field?.id}
                         field={field}
                         context={context}
-                        condition={condition(field)}
+                        condition={checkCondition(field)}
                         issues={issues}
                       >
                         {
