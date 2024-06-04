@@ -1,4 +1,5 @@
 import "./App.css";
+import clsx from "clsx";
 import UmbracoForm from "./components/UmbracoForm";
 import formDefinition from "./form-definition";
 import { FormDto } from "./components/types";
@@ -10,9 +11,9 @@ function App() {
     <div className="p-4">
       <UmbracoForm
         form={form}
-        config={{ validation: { enabled: true } }}
+        config={{ shouldValidate: true }}
         renderPage={(props) => (
-          <div className="space-y-4">
+          <div className="space-y-4 mb-4">
             <UmbracoForm.Page {...props} />
           </div>
         )}
@@ -22,14 +23,16 @@ function App() {
           </div>
         )}
         renderField={(props) => (
-          <div className="flex flex-col space-y-2">
+          <div className="grid">
             <UmbracoForm.Field {...props} />
           </div>
         )}
         renderInput={(props) => (
           <UmbracoForm.Input
             {...props}
-            className="aria-invalid:border-red-500 rounded"
+            className={clsx({
+              rounded: props.field?.type?.name !== "Multiple choice",
+            })}
           />
         )}
         onSubmit={(e) => {

@@ -56,7 +56,7 @@ function DefaultPage({
   condition,
   context,
 }: PageProps): React.ReactNode {
-  if (condition.hide) return null;
+  if (!condition) return null;
   if (context.totalPages > 1 && context.currentPage !== pageIndex) {
     return null;
   }
@@ -73,7 +73,7 @@ function DefaultFieldset({
   children,
   condition,
 }: FieldsetProps): React.ReactNode {
-  if (condition.hide) return null;
+  if (!condition) return null;
   return (
     <Fragment>
       {fieldset.caption ? <h3>{fieldset.caption}</h3> : null}
@@ -98,24 +98,43 @@ function DefaultField({
   issues,
   context,
 }: FieldProps): React.ReactNode {
-  if (condition.hide) return null;
+  if (!condition) return null;
   const hasIssues = issues && issues.length > 0;
   const showValidationErrors =
     hasIssues && context.form.hideFieldValidation !== true;
   const indicator = shouldShowIndicator(field, context.form)
     ? context.form.indicator
     : "";
-  const helpTextId = field.helpText ? "helpText:" + field.id : "";
+  const helpTextId = field.helpText ? "helpText:" + field.id : undefined;
+  const fieldTypeName = field.type?.name as DefaultFormFieldTypeName;
+  const helpText = field.helpText ? (
+    <span id={helpTextId}>{field.helpText}</span>
+  ) : null;
+  const validationErrors = showValidationErrors ? (
+    <span id={"error:" + field.id}>{issues?.at(0)?.message}</span>
+  ) : null;
+
+  if (fieldTypeName === "Multiple choice") {
+    return (
+      <fieldset>
+        <legend>
+          {field.caption} {indicator}
+        </legend>
+        {helpText}
+        {children}
+        {validationErrors}
+      </fieldset>
+    );
+  }
+
   return (
     <Fragment>
       <label htmlFor={field.id} aria-describedby={helpTextId}>
         {field.caption} {indicator}
       </label>
+      {helpText}
       {children}
-      {field.helpText ? <span id={helpTextId}>{field.helpText}</span> : null}
-      {showValidationErrors ? (
-        <span id={"error:" + field.id}>{issues?.at(0)?.message}</span>
-      ) : null}
+      {validationErrors}
     </Fragment>
   );
 }
@@ -126,7 +145,7 @@ function DefaultInput({
   context,
   ...rest
 }: InputProps): React.ReactNode {
-  const { validation } = context.config ?? {};
+  const { shouldValidate: validate } = context.config;
   const hasIssues = issues && issues?.length > 0;
 
   let attributes = {
@@ -136,15 +155,11 @@ function DefaultInput({
     title: field.caption || undefined,
     autoComplete: field?.settings?.autocompleteAttribute || undefined,
     defaultValue: field?.settings?.defaultValue || undefined,
-    required:
-      validation?.enabled && validation?.native ? field.required : undefined,
-    pattern:
-      validation?.enabled && validation?.native
-        ? field.pattern || undefined
-        : undefined,
-    ["aria-invalid"]: validation?.enabled ? hasIssues : undefined,
+    required: validate && field.required ? field.required : undefined,
+    pattern: validate && field.pattern ? field.pattern : undefined,
+    ["aria-invalid"]: validate ? hasIssues : undefined,
     ["aria-errormessage"]:
-      validation?.enabled && hasIssues ? issues.at(0)?.message : undefined,
+      validate && hasIssues ? issues.at(0)?.message : undefined,
     ...rest,
   };
 
@@ -276,12 +291,8 @@ function UmbracoForm(props: UmbracoFormProps) {
 
   const config: UmbracoFormConfig = {
     schema: umbracoFormToZod(form, configOverride as UmbracoFormConfig),
+    shouldValidate: false,
     ...configOverride,
-    validation: {
-      enabled: false,
-      native: false,
-      ...configOverride?.validation,
-    },
   };
   config.schema = configOverride?.schema ?? umbracoFormToZod(form, config);
 
@@ -290,13 +301,12 @@ function UmbracoForm(props: UmbracoFormProps) {
   const [data, setData] = useState<BaseSchema>({});
   const [formIssues, setFormIssues] = useState<ZodIssue[]>([]);
   const [currentPage, setCurrentPage] = useState(0);
-  const checkCondition = useCallback(
-    (dto: DtoWithCondition) => evaluateCondition(dto, form, data, config),
-    [form, data, config],
-  );
+
+  const checkCondition = (dto: DtoWithCondition) =>
+    evaluateCondition(dto, form, data, config);
 
   const totalPages =
-    form?.pages?.filter((page) => checkCondition(page).show).length ?? 1;
+    form?.pages?.filter((page) => checkCondition(page)).length ?? 1;
 
   const validateFormData = useCallback(
     (coercedData: BaseSchema) => {
@@ -323,7 +333,7 @@ function UmbracoForm(props: UmbracoFormProps) {
     setFormData(formData);
     setData(coercedData);
     if (
-      config.validation?.enabled &&
+      config.shouldValidate &&
       submitAttempts > 0 &&
       validateFormData(coercedData).success === false
     ) {
@@ -337,7 +347,7 @@ function UmbracoForm(props: UmbracoFormProps) {
   const activePageDefinition = form?.pages?.[currentPage] as FormPageDto;
 
   const isCurrentPageValid = useCallback(() => {
-    if (config.validation?.enabled === false) {
+    if (config.shouldValidate === false) {
       return true;
     }
     const fieldAliasesWithIssues = validateFormData(
@@ -368,9 +378,27 @@ function UmbracoForm(props: UmbracoFormProps) {
     return true;
   }, [form, data, config, currentPage]);
 
+  const focusFirstInvalidField = () => {
+    const fieldWithIssues = validateFormData(data).error?.issues?.find(
+      (issue) => issue.path.length > 0,
+    );
+    if (fieldWithIssues) {
+      const fieldId = fieldWithIssues.path.join(".");
+      if (fieldId) {
+        const fieldElement = document.querySelector(
+          'form[] [name="' + fieldId + '"]',
+        ) as HTMLInputElement;
+        if (fieldElement) {
+          fieldElement.focus();
+        }
+      }
+    }
+  };
+
   const handleNextPage = (e: React.MouseEvent<HTMLButtonElement>) => {
     e.preventDefault();
     if (isCurrentPageValid() === false) {
+      focusFirstInvalidField();
       return;
     }
     setCurrentPage((prev) => prev + 1);
@@ -387,10 +415,8 @@ function UmbracoForm(props: UmbracoFormProps) {
   const handleOnSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setSubmitAttempts((prev) => prev + 1);
-    if (
-      config.validation?.enabled &&
-      validateFormData(data).success === false
-    ) {
+    if (config.shouldValidate && validateFormData(data).success === false) {
+      focusFirstInvalidField();
       return;
     }
     if (typeof onSubmit === "function") {

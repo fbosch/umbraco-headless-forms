@@ -6,7 +6,6 @@ import type {
   FormDto,
   FormPageDto,
   DtoWithCondition,
-  EvaluatedCondition,
 } from "./types";
 
 export function exhaustiveCheck(value: never): never {
@@ -49,7 +48,7 @@ export function getAllFieldsFilteredByConditions<TData extends BaseSchema>(
   config: UmbracoFormConfig,
 ): FormFieldDto[] {
   const checkCondition = (dto?: DtoWithCondition) =>
-    dto ? evaluateCondition(dto, form, data, config).show : false;
+    dto ? evaluateCondition(dto, form, data, config) : false;
 
   return form?.pages
     ?.filter(checkCondition)
@@ -66,27 +65,16 @@ export function evaluateCondition<TData extends BaseSchema>(
   form: FormDto,
   data: TData,
   config: UmbracoFormConfig,
-): EvaluatedCondition {
+): boolean {
   const isFulfilled = validateConditionRules(dto, form, data, config);
 
   if (dto?.condition?.actionType === "Show") {
-    return {
-      show: isFulfilled,
-      hide: !isFulfilled,
-      isFulfilled,
-    };
-  }
-  if (dto?.condition?.actionType === "Hide") {
-    return {
-      show: !isFulfilled,
-      hide: isFulfilled,
-      isFulfilled,
-    };
+    return isFulfilled;
   }
 
-  return {
-    show: true,
-    hide: false,
-    isFulfilled: true,
-  };
+  if (dto?.condition?.actionType === "Hide") {
+    return !isFulfilled;
+  }
+
+  return true;
 }

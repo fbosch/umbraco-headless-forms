@@ -1,3 +1,36 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@layer base { 
+  h2 {
+    @apply text-3xl font-bold;
+  }
+
+  button {
+    @apply rounded border border-gray-300 px-4 py-2;
+  }
+
+  input {
+    &[aria-invalid="true"] {
+      @apply border-red-500;
+    }
+  }
+
+  [id^="error:"] {
+    @apply text-red-500 text-sm mt-1;
+    &:before {
+      content: "⚠️";
+      @apply text-red-500 text-sm pr-2;
+    }
+  }
+  
+  [id^="helpText:"] {
+    @apply text-gray-500 text-sm mb-2;
+  }
+
+  label {
+    @apply block text-sm font-medium text-gray-700;
+  }
+}
+

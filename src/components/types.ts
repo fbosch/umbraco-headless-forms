@@ -22,12 +22,6 @@ export type BaseSchema = z.infer<ReturnType<typeof umbracoFormToZod>>;
 
 export type DtoWithCondition = FormPageDto | FormFieldsetDto | FormFieldDto;
 
-export type EvaluatedCondition = {
-  show: boolean;
-  hide: boolean;
-  isFulfilled: boolean;
-};
-
 //** Form field names from default Umbraco form installation */
 export type DefaultFormFieldTypeName =
   | "Short answer"
@@ -42,16 +36,10 @@ export type DefaultFormFieldTypeName =
 
 export type MapFormFieldToZod = (field?: FormFieldDto) => z.ZodTypeAny;
 
-export type ValidationConfig = {
-  native: boolean;
-  enabled: boolean;
-};
-
 export type UmbracoFormConfig = {
   schema: ReturnType<typeof umbracoFormToZod>;
   mapCustomFieldToZodType?: MapFormFieldToZod;
-  enableNativeValidation?: boolean;
-  validation?: Partial<ValidationConfig>;
+  shouldValidate?: boolean;
 };
 
 export type UmbracoFormContext = {
@@ -68,10 +56,10 @@ export type RenderProps = {
   context: UmbracoFormContext;
 } & React.HTMLAttributes<HTMLElement> &
   (
-    | { page: FormPageDto; condition: EvaluatedCondition }
-    | { fieldset: FormFieldsetDto; condition: EvaluatedCondition }
+    | { page: FormPageDto; condition: boolean }
+    | { fieldset: FormFieldsetDto; condition: boolean }
     | { column: FormFieldsetColumnDto }
-    | { field: FormFieldDto; condition: EvaluatedCondition }
+    | { field: FormFieldDto; condition: boolean }
   );
 
 export type FormProps = {
@@ -81,12 +69,12 @@ export type FormProps = {
 export type PageProps = RenderProps & {
   page: FormPageDto;
   pageIndex: number;
-  condition: EvaluatedCondition;
+  condition: boolean;
 };
 
 export type FieldsetProps = RenderProps & {
   fieldset: FormFieldsetDto;
-  condition: EvaluatedCondition;
+  condition: boolean;
 };
 
 export type ColumnProps = RenderProps & {
@@ -95,7 +83,7 @@ export type ColumnProps = RenderProps & {
 
 export type FieldProps = RenderProps & {
   field: FormFieldDto;
-  condition: EvaluatedCondition;
+  condition: boolean;
   issues?: z.ZodIssue[];
 };
 

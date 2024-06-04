@@ -4,8 +4,5 @@ export default {
   theme: {
     extend: {},
   },
-  plugins: [
-    require("@tailwindcss/forms"),
-    require("tailwindcss-aria-attributes"),
-  ],
+  plugins: [require("@tailwindcss/forms")],
 };
