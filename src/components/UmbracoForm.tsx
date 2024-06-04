@@ -1,4 +1,10 @@
-import React, { Fragment, useCallback, useState } from "react";
+import React, {
+  Fragment,
+  createContext,
+  useCallback,
+  useState,
+  useContext,
+} from "react";
 import type {
   BaseSchema,
   UmbracoFormContext,
@@ -11,7 +17,6 @@ import type {
   InputProps,
   FieldsetProps,
   FieldProps,
-  ButtonProps,
   DtoWithCondition,
   FormPageDto,
 } from "./types";
@@ -39,10 +44,22 @@ export interface UmbracoFormProps
   renderColumn?: (props: ColumnProps) => React.ReactNode;
   renderField?: (props: FieldProps) => React.ReactNode;
   renderInput?: (props: InputProps) => React.ReactNode | undefined;
-  renderSubmit?: (props: ButtonProps) => React.ReactNode;
-  renderNextButton?: (props: ButtonProps) => React.ReactNode;
-  renderPreviousButton?: (props: ButtonProps) => React.ReactNode;
+  renderSubmitButton?: (
+    props: React.HTMLAttributes<HTMLButtonElement>,
+  ) => React.ReactNode;
+  renderNextButton?: (
+    props: React.HTMLAttributes<HTMLButtonElement>,
+  ) => React.ReactNode;
+  renderPreviousButton?: (
+    props: React.HTMLAttributes<HTMLButtonElement>,
+  ) => React.ReactNode;
 }
+
+const UmbracoFormContext = createContext<UmbracoFormContext>(
+  {} as UmbracoFormContext,
+);
+
+export const useUmbracoFormContext = () => useContext(UmbracoFormContext);
 
 function DefaultForm({ form, ...rest }: FormProps): React.ReactNode {
   return (
@@ -62,10 +79,10 @@ function DefaultPage({
   pageIndex,
   children,
   condition,
-  context,
 }: PageProps): React.ReactNode {
+  const { totalPages, currentPage } = useUmbracoFormContext();
   if (!condition) return null;
-  if (context.totalPages > 1 && context.currentPage !== pageIndex) {
+  if (totalPages > 1 && currentPage !== pageIndex) {
     return null;
   }
   return (
@@ -104,8 +121,8 @@ function DefaultField({
   children,
   condition,
   issues,
-  context,
 }: FieldProps): React.ReactNode {
+  const context = useUmbracoFormContext();
   if (!condition) return null;
   const hasIssues = issues && issues.length > 0;
   const showValidationErrors =
@@ -147,13 +164,9 @@ function DefaultField({
   );
 }
 
-function DefaultInput({
-  field,
-  issues,
-  context,
-  ...rest
-}: InputProps): React.ReactNode {
-  const { shouldValidate: validate } = context.config;
+function DefaultInput({ field, issues, ...rest }: InputProps): React.ReactNode {
+  const context = useUmbracoFormContext();
+  const { shouldValidate } = context.config;
   const hasIssues = issues && issues?.length > 0;
 
   let attributes = {
@@ -163,11 +176,11 @@ function DefaultInput({
     title: field.caption || undefined,
     autoComplete: field?.settings?.autocompleteAttribute || undefined,
     defaultValue: field?.settings?.defaultValue || undefined,
-    required: validate && field.required ? field.required : undefined,
-    pattern: validate && field.pattern ? field.pattern : undefined,
-    ["aria-invalid"]: validate ? hasIssues : undefined,
+    required: shouldValidate && field.required ? field.required : undefined,
+    pattern: shouldValidate && field.pattern ? field.pattern : undefined,
+    ["aria-invalid"]: shouldValidate ? hasIssues : undefined,
     ["aria-errormessage"]:
-      validate && hasIssues ? issues.at(0)?.message : undefined,
+      shouldValidate && hasIssues ? issues.at(0)?.message : undefined,
     ...rest,
   };
 
@@ -236,44 +249,44 @@ function DefaultInput({
   }
 }
 
-function DefaultSubmitButton({
-  context,
-  ...rest
-}: ButtonProps): React.ReactNode {
-  if (
-    context.totalPages > 1 &&
-    context.currentPage !== context.totalPages - 1
-  ) {
+function DefaultSubmitButton(
+  props: React.HTMLAttributes<HTMLButtonElement>,
+): React.ReactNode {
+  const { form, totalPages, currentPage } = useUmbracoFormContext();
+  if (totalPages > 1 && currentPage !== totalPages - 1) {
     return null;
   }
   return (
-    <button type="submit" {...rest}>
-      {context.form.submitLabel}
+    <button type="submit" {...props}>
+      {form.submitLabel}
     </button>
   );
 }
 
-function DefaultNextButton({ context, ...rest }: ButtonProps): React.ReactNode {
-  if (context.currentPage === context.totalPages - 1) {
+function DefaultNextButton(
+  props: React.HTMLAttributes<HTMLButtonElement>,
+): React.ReactNode {
+  const { form, totalPages, currentPage } = useUmbracoFormContext();
+  if (currentPage === totalPages - 1) {
     return null;
   }
   return (
-    <button type="button" {...rest}>
-      Next
+    <button type="button" {...props}>
+      {form.nextLabel}
     </button>
   );
 }
 
 function DefaultPreviousButton({
-  context,
   ...rest
-}: ButtonProps): React.ReactNode {
-  if (context.currentPage === 0) {
+}: React.HTMLAttributes<HTMLButtonElement>): React.ReactNode {
+  const { form, currentPage } = useUmbracoFormContext();
+  if (currentPage === 0) {
     return null;
   }
   return (
     <button type="button" {...rest}>
-      Previous
+      {form.previousLabel}
     </button>
   );
 }
@@ -288,7 +301,7 @@ function UmbracoForm(props: UmbracoFormProps) {
     renderColumn: Column = DefaultColumn,
     renderField: Field = DefaultField,
     renderInput: Input = DefaultInput,
-    renderSubmit: SubmitButton = DefaultSubmitButton,
+    renderSubmitButton: SubmitButton = DefaultSubmitButton,
     renderNextButton: NextButton = DefaultNextButton,
     renderPreviousButton: PreviousButton = DefaultPreviousButton,
     children,
@@ -334,7 +347,7 @@ function UmbracoForm(props: UmbracoFormProps) {
 
   const handleOnChange = (e: React.ChangeEvent<HTMLFormElement>) => {
     const formData = new FormData(e.currentTarget);
-    const coercedData = coerceFormData(formData, config);
+    const coercedData = coerceFormData(formData, config.schema);
     setFormData(formData);
     setData(coercedData);
     if (
@@ -439,73 +452,63 @@ function UmbracoForm(props: UmbracoFormProps) {
   };
 
   return (
-    <Form
-      form={form}
-      {...rest}
-      onChange={handleOnChange}
-      onSubmit={handleOnSubmit}
-    >
-      {form?.pages?.map((page, index) => (
-        <Page
-          key={"page." + index}
-          page={page}
-          pageIndex={index}
-          context={context}
-          condition={checkCondition(page)}
-        >
-          {page?.fieldsets?.map((fieldset, index) => (
-            <Fieldset
-              key={"fieldset." + index}
-              fieldset={fieldset}
-              context={context}
-              condition={checkCondition(fieldset)}
-            >
-              {fieldset?.columns?.map((column, index) => (
-                <Column
-                  key={"column." + index}
-                  column={column}
-                  context={context}
-                >
-                  {column?.fields?.map((field) => {
-                    const issues = formIssues?.filter(
-                      // improve this
-                      (issue) => issue.path.join(".") === field.alias,
-                    );
-                    return (
-                      <Field
-                        key={"field." + field?.id}
-                        field={field}
-                        context={context}
-                        condition={checkCondition(field)}
-                        issues={issues}
-                      >
-                        {
-                          // fallback to default component if custom component returns undefined
-                          Input({ field, issues, context }) ??
-                            DefaultInput({
-                              field,
-                              issues,
-                              context,
-                            })
-                        }
-                      </Field>
-                    );
-                  })}
-                </Column>
-              ))}
-            </Fieldset>
-          ))}
-        </Page>
-      ))}
-      {children}
-      {totalPages > 1 ? (
-        <Fragment>
-          <PreviousButton context={context} onClick={handlePreviousPage} />
-          <NextButton context={context} onClick={handleNextPage} />
-        </Fragment>
-      ) : null}
-      <SubmitButton context={context} />
-    </Form>
+    <UmbracoFormContext.Provider value={context}>
+      <Form
+        form={form}
+        {...rest}
+        onChange={handleOnChange}
+        onSubmit={handleOnSubmit}
+      >
+        {form?.pages?.map((page, index) => (
+          <Page
+            key={"page." + index}
+            page={page}
+            pageIndex={index}
+            condition={checkCondition(page)}
+          >
+            {page?.fieldsets?.map((fieldset, index) => (
+              <Fieldset
+                key={"fieldset." + index}
+                fieldset={fieldset}
+                condition={checkCondition(fieldset)}
+              >
+                {fieldset?.columns?.map((column, index) => (
+                  <Column key={"column." + index} column={column}>
+                    {column?.fields?.map((field) => {
+                      const issues = formIssues?.filter(
+                        (issue) => issue.path.join(".") === field.alias,
+                      );
+                      const inputProps = { field, issues };
+                      return (
+                        <Field
+                          key={"field." + field?.id}
+                          field={field}
+                          condition={checkCondition(field)}
+                          issues={issues}
+                        >
+                          {
+                            // fallback to default component if custom component returns undefined
+                            Input(inputProps) ?? DefaultInput(inputProps)
+                          }
+                        </Field>
+                      );
+                    })}
+                  </Column>
+                ))}
+              </Fieldset>
+            ))}
+          </Page>
+        ))}
+        {children}
+        {totalPages > 1 ? (
+          <Fragment>
+            <PreviousButton onClick={handlePreviousPage} />
+            <NextButton onClick={handleNextPage} />
+          </Fragment>
+        ) : null}
+        <SubmitButton />
+      </Form>
+    </UmbracoFormContext.Provider>
   );
 }
 

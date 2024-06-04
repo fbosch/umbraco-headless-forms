@@ -114,13 +114,13 @@ export function omitFieldsBasedOnConditionFromData<TData extends BaseSchema>(
 /** coerces form data to the schema format */
 export function coerceFormData(
   formData: FormData | undefined,
-  config: UmbracoFormConfig,
+  schema: ReturnType<typeof umbracoFormToZod>,
 ) {
-  let output: z.infer<typeof config.schema> = {};
+  let output: z.infer<typeof schema> = {};
   if (!formData) return output;
 
-  for (let key of Object.keys(config.schema.shape)) {
-    parseParams(output, config.schema, key, formData.get(key));
+  for (let key of Object.keys(schema.shape)) {
+    parseParams(output, schema, key, formData.get(key));
   }
 
   return output;

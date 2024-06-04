@@ -51,10 +51,7 @@ export type UmbracoFormContext = {
   totalPages: number;
 };
 
-export type RenderProps = {
-  children: React.ReactNode;
-  context: UmbracoFormContext;
-} & React.HTMLAttributes<HTMLElement> &
+export type RenderProps = React.HTMLAttributes<HTMLElement> &
   (
     | { page: FormPageDto; condition: boolean }
     | { fieldset: FormFieldsetDto; condition: boolean }
@@ -88,6 +85,3 @@ export type FieldProps = RenderProps & {
 };
 
 export type InputProps = Omit<FieldProps, "children" | "condition">;
-export type ButtonProps = {
-  context: UmbracoFormContext;
-} & React.HTMLAttributes<HTMLButtonElement>;
