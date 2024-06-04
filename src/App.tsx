@@ -54,7 +54,7 @@ function App() {
             const form = e.target as HTMLFormElement;
             const formData = new FormData(form);
             const values = coerceFormData(formData, schema);
-            setSentForm(values);
+            setSentForm(values); // POST: /umbraco/forms/api/v1/entries/${form.id}
           }}
         />
       )}

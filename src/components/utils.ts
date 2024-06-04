@@ -1,4 +1,4 @@
-import { evaluateCondition } from "./predicates";
+import { isConditionFulfilled } from "./predicates";
 import type {
   BaseSchema,
   FormFieldDto,
@@ -49,7 +49,7 @@ export function filterFieldsByConditions<TData extends BaseSchema>(
   config: UmbracoFormConfig,
 ): FormFieldDto[] {
   const checkCondition = (dto?: DtoWithCondition) =>
-    dto ? evaluateCondition(dto, form, data, config) : false;
+    dto ? isConditionFulfilled(dto, form, data, config) : false;
 
   return form?.pages
     ?.filter(checkCondition)

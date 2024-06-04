@@ -40,6 +40,7 @@ export type UmbracoFormConfig = {
   schema: ReturnType<typeof umbracoFormToZod>;
   mapCustomFieldToZodType?: MapFormFieldToZod;
   shouldValidate?: boolean;
+  shouldUseNativeValidation?: boolean;
 };
 
 export type UmbracoFormContext = {

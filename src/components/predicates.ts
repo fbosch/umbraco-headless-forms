@@ -22,13 +22,13 @@ export function shouldShowIndicator(field: FormFieldDto, form: FormDto) {
 }
 
 /** get evaluated condition rules for a given page, fieldset or field */
-export function evaluateCondition<TData extends BaseSchema>(
+export function isConditionFulfilled<TData extends BaseSchema>(
   dto: DtoWithCondition,
   form: FormDto,
   data: TData,
   config: UmbracoFormConfig,
 ): boolean {
-  const isFulfilled = validateConditionRules(dto, form, data, config);
+  const isFulfilled = areAllRulesFulfilled(dto, form, data, config);
 
   if (dto?.condition?.actionType === "Show") {
     return isFulfilled;
@@ -41,7 +41,7 @@ export function evaluateCondition<TData extends BaseSchema>(
   return true;
 }
 
-export function validateConditionRules<TData extends BaseSchema>(
+export function areAllRulesFulfilled<TData extends BaseSchema>(
   dto: DtoWithCondition,
   form: FormDto,
   data: TData,
@@ -53,10 +53,12 @@ export function validateConditionRules<TData extends BaseSchema>(
   const appliedRules = rules.map((rule): boolean => {
     const operator = rule.operator as FieldConditionRuleOperator;
     const targetField = getFieldById(form, rule.field);
-    const zodType = mapFieldToZod(targetField, config.mapCustomFieldToZodType);
-    const alias = targetField?.alias as string;
-    const fieldValue = data[alias];
-    const ruleValue = coerceRuleValue(zodType, rule.value);
+    const fieldZodType = mapFieldToZod(
+      targetField,
+      config.mapCustomFieldToZodType,
+    );
+    const fieldValue = data[targetField?.alias as string];
+    const ruleValue = coerceRuleValue(fieldZodType, rule.value);
 
     switch (operator) {
       case "Is":
@@ -141,6 +143,7 @@ export function validateConditionRules<TData extends BaseSchema>(
   if (dto.condition?.logicType === "All") {
     return appliedRules.every((rule) => rule);
   }
+
   if (dto.condition?.logicType === "Any") {
     return appliedRules.some((rule) => rule);
   }

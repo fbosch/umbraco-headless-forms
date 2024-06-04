@@ -30,8 +30,8 @@ import {
   umbracoFormToZod,
   omitFieldsBasedOnConditionFromData,
 } from "./umbraco-form-to-zod";
-import { ZodIssue } from "zod-validation-error";
-import { shouldShowIndicator, evaluateCondition } from "./predicates";
+import { ZodIssue } from "zod";
+import { shouldShowIndicator, isConditionFulfilled } from "./predicates";
 
 export interface UmbracoFormProps
   extends React.FormHTMLAttributes<HTMLFormElement> {
@@ -166,8 +166,9 @@ function DefaultField({
 
 function DefaultInput({ field, issues, ...rest }: InputProps): React.ReactNode {
   const context = useUmbracoFormContext();
-  const { shouldValidate } = context.config;
+  const { shouldValidate, shouldUseNativeValidation } = context.config;
   const hasIssues = issues && issues?.length > 0;
+  const validate = shouldValidate && shouldUseNativeValidation;
 
   let attributes = {
     name: field.alias,
@@ -176,11 +177,11 @@ function DefaultInput({ field, issues, ...rest }: InputProps): React.ReactNode {
     title: field.caption || undefined,
     autoComplete: field?.settings?.autocompleteAttribute || undefined,
     defaultValue: field?.settings?.defaultValue || undefined,
-    required: shouldValidate && field.required ? field.required : undefined,
-    pattern: shouldValidate && field.pattern ? field.pattern : undefined,
-    ["aria-invalid"]: shouldValidate ? hasIssues : undefined,
+    required: validate && field.required ? field.required : undefined,
+    pattern: validate && field.pattern ? field.pattern : undefined,
+    ["aria-invalid"]: validate ? hasIssues : undefined,
     ["aria-errormessage"]:
-      shouldValidate && hasIssues ? issues.at(0)?.message : undefined,
+      validate && hasIssues ? issues.at(0)?.message : undefined,
     ...rest,
   };
 
@@ -277,15 +278,15 @@ function DefaultNextButton(
   );
 }
 
-function DefaultPreviousButton({
-  ...rest
-}: React.HTMLAttributes<HTMLButtonElement>): React.ReactNode {
+function DefaultPreviousButton(
+  props: React.HTMLAttributes<HTMLButtonElement>,
+): React.ReactNode {
   const { form, currentPage } = useUmbracoFormContext();
   if (currentPage === 0) {
     return null;
   }
   return (
-    <button type="button" {...rest}>
+    <button type="button" {...props}>
       {form.previousLabel}
     </button>
   );
@@ -311,11 +312,11 @@ function UmbracoForm(props: UmbracoFormProps) {
   } = props;
 
   const config: UmbracoFormConfig = {
-    schema: umbracoFormToZod(form, configOverride as UmbracoFormConfig),
+    schema: configOverride?.schema ?? umbracoFormToZod(form, configOverride),
     shouldValidate: false,
+    shouldUseNativeValidation: false,
     ...configOverride,
   };
-  config.schema = configOverride?.schema ?? umbracoFormToZod(form, config);
 
   const [submitAttempts, setSubmitAttempts] = useState<number>(0);
   const [formData, setFormData] = useState<FormData | undefined>(undefined);
@@ -324,10 +325,9 @@ function UmbracoForm(props: UmbracoFormProps) {
   const [currentPage, setCurrentPage] = useState(0);
 
   const checkCondition = (dto: DtoWithCondition) =>
-    evaluateCondition(dto, form, data, config);
+    isConditionFulfilled(dto, form, data, config);
 
-  const totalPages =
-    form?.pages?.filter((page) => checkCondition(page)).length ?? 1;
+  const totalPages = form?.pages?.filter(checkCondition).length ?? 1;
 
   const validateFormData = useCallback(
     (coercedData: BaseSchema) => {
@@ -442,17 +442,17 @@ function UmbracoForm(props: UmbracoFormProps) {
     }
   };
 
-  const context: UmbracoFormContext = {
-    form,
-    formData,
-    config,
-    submitAttempts,
-    totalPages,
-    currentPage,
-  };
-
   return (
-    <UmbracoFormContext.Provider value={context}>
+    <UmbracoFormContext.Provider
+      value={{
+        form,
+        formData,
+        config,
+        submitAttempts,
+        totalPages,
+        currentPage,
+      }}
+    >
       <Form
         form={form}
         {...rest}
