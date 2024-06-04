@@ -6,7 +6,7 @@ import type {
   DefaultFormFieldTypeName,
   UmbracoFormConfig,
   MapFormFieldToZod,
-  BaseSchema,
+  FormShape,
 } from "./types";
 
 /** map umbraco form fields to zod type */
@@ -96,9 +96,9 @@ export function umbracoFormToZod(
 }
 
 /** omit fields from data that are not visible to the user */
-export function omitFieldsBasedOnConditionFromData<TData extends BaseSchema>(
+export function omitFieldsBasedOnConditionFromData<TData extends FormShape>(
   form: FormDto,
-  data: TData = {} as TData,
+  data: TData,
   config: UmbracoFormConfig,
 ) {
   let output: Record<string, unknown> = {};

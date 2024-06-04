@@ -5,8 +5,8 @@ import React, {
   useState,
   useContext,
 } from "react";
+import { z } from "zod";
 import type {
-  BaseSchema,
   UmbracoFormContext,
   UmbracoFormConfig,
   FormDto,
@@ -17,7 +17,6 @@ import type {
   FieldsetProps,
   FieldProps,
   DtoWithCondition,
-  FormPageDto,
 } from "./types";
 import { getAllFieldsOnPage, filterFieldsByConditions } from "./utils";
 import {
@@ -95,7 +94,7 @@ function UmbracoForm(props: UmbracoFormProps) {
 
   const [submitAttempts, setSubmitAttempts] = useState<number>(0);
   const [formData, setFormData] = useState<FormData | undefined>(undefined);
-  const [data, setData] = useState<BaseSchema>({});
+  const [data, setData] = useState<z.infer<typeof config.schema>>({});
   const [formIssues, setFormIssues] = useState<ZodIssue[]>([]);
   const [currentPage, setCurrentPage] = useState(0);
 
@@ -105,7 +104,7 @@ function UmbracoForm(props: UmbracoFormProps) {
   const totalPages = form?.pages?.filter(checkCondition).length ?? 1;
 
   const validateFormData = useCallback(
-    (coercedData: BaseSchema) => {
+    (coercedData: z.infer<typeof config.schema>) => {
       const dataWithConditionalFieldsOmitted =
         omitFieldsBasedOnConditionFromData(form, coercedData, config);
       console.log(dataWithConditionalFieldsOmitted);
@@ -137,7 +136,7 @@ function UmbracoForm(props: UmbracoFormProps) {
     }
   };
 
-  const activePageDefinition = form?.pages?.[currentPage] as FormPageDto;
+  const activePageDefinition = form?.pages?.[currentPage];
 
   const isCurrentPageValid = useCallback(() => {
     if (config.shouldValidate === false) {
@@ -156,7 +155,7 @@ function UmbracoForm(props: UmbracoFormProps) {
     // get all fields on the current page and filter out fields with conditions that are not met
     // so that they wont block the user from going to the next page
     const fieldsOnPage = getAllFieldsOnPage(activePageDefinition)
-      .map((field) => field.alias)
+      .map((field) => field?.alias)
       .filter((field) => fieldsWithConditionsMet.includes(field));
 
     if (

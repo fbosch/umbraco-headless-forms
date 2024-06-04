@@ -18,7 +18,7 @@ export type FieldConditionLogicType =
 export type FieldConditionRuleOperator =
   components["schemas"]["FieldConditionRuleOperator"];
 
-export type BaseSchema = z.infer<ReturnType<typeof umbracoFormToZod>>;
+export type FormShape = z.infer<ReturnType<typeof umbracoFormToZod>>;
 
 export type DtoWithCondition = FormPageDto | FormFieldsetDto | FormFieldDto;
 

@@ -1,6 +1,6 @@
 import { isConditionFulfilled } from "./predicates";
 import type {
-  BaseSchema,
+  FormShape,
   FormFieldDto,
   UmbracoFormConfig,
   FormDto,
@@ -36,14 +36,16 @@ export function getFieldByAlias(
   return getAllFields(form)?.find((field) => field?.alias === alias);
 }
 
-export function getAllFieldsOnPage(page: FormPageDto): FormFieldDto[] {
-  return page?.fieldsets
-    ?.flatMap((fieldset) => fieldset?.columns)
-    ?.flatMap((column) => column?.fields) as FormFieldDto[];
+export function getAllFieldsOnPage(page?: FormPageDto) {
+  return (
+    page?.fieldsets
+      ?.flatMap((fieldset) => fieldset?.columns)
+      ?.flatMap((column) => column?.fields) ?? []
+  );
 }
 
 /** walks the form definition and returns all fields that are visible to the user */
-export function filterFieldsByConditions<TData extends BaseSchema>(
+export function filterFieldsByConditions<TData extends FormShape>(
   form: FormDto,
   data: TData,
   config: UmbracoFormConfig,

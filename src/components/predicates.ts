@@ -1,5 +1,5 @@
 import type {
-  BaseSchema,
+  FormShape,
   FormFieldDto,
   FieldConditionRuleOperator,
   FormDto,
@@ -22,7 +22,7 @@ export function shouldShowIndicator(field: FormFieldDto, form: FormDto) {
 }
 
 /** get evaluated condition rules for a given page, fieldset or field */
-export function isConditionFulfilled<TData extends BaseSchema>(
+export function isConditionFulfilled<TData extends FormShape>(
   dto: DtoWithCondition,
   form: FormDto,
   data: TData,
@@ -41,7 +41,7 @@ export function isConditionFulfilled<TData extends BaseSchema>(
   return true;
 }
 
-export function areAllRulesFulfilled<TData extends BaseSchema>(
+export function areAllRulesFulfilled<TData extends FormShape>(
   dto: DtoWithCondition,
   form: FormDto,
   data: TData,
