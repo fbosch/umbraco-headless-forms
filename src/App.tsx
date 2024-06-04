@@ -1,13 +1,14 @@
 import "./App.css";
 import { useState } from "react";
 import clsx from "clsx";
-import UmbracoForm from "./components/UmbracoForm";
-import formDefinition from "./form-definition";
-import { FormDto } from "./components/types";
-import {
-  coerceFormData,
+
+import UmbracoForm, {
   umbracoFormToZod,
-} from "./components/umbraco-form-to-zod";
+  coerceFormData,
+  type FormDto,
+} from "./components/UmbracoForm";
+
+import formDefinition from "./form-definition";
 
 const form = formDefinition as unknown as FormDto;
 

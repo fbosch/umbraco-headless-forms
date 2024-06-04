@@ -36,21 +36,21 @@ export type DefaultFormFieldTypeName =
 
 export type MapFormFieldToZod = (field?: FormFieldDto) => z.ZodTypeAny;
 
-export type UmbracoFormConfig = {
+export interface UmbracoFormConfig {
   schema: ReturnType<typeof umbracoFormToZod>;
   mapCustomFieldToZodType?: MapFormFieldToZod;
   shouldValidate?: boolean;
   shouldUseNativeValidation?: boolean;
-};
+}
 
-export type UmbracoFormContext = {
+export interface UmbracoFormContext {
   form: FormDto;
   formData: FormData | undefined;
   config: UmbracoFormConfig;
   submitAttempts: number;
   currentPage: number;
   totalPages: number;
-};
+}
 
 export type RenderProps = React.HTMLAttributes<HTMLElement> &
   (

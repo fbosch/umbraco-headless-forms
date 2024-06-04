@@ -294,4 +294,6 @@ UmbracoForm.Column = DefaultColumn;
 UmbracoForm.Field = DefaultField;
 UmbracoForm.SubmitButton = DefaultSubmitButton;
 
+export { umbracoFormToZod, coerceFormData };
+export type * from "./types";
 export default UmbracoForm;
