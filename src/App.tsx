@@ -35,10 +35,6 @@ function App() {
             })}
           />
         )}
-        onSubmit={(e) => {
-          e.preventDefault();
-          console.log("submit", e.target);
-        }}
       />
     </div>
   );

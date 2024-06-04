@@ -1,4 +1,4 @@
-import { validateConditionRules } from "./predicates";
+import { evaluateCondition } from "./predicates";
 import type {
   BaseSchema,
   FormFieldDto,
@@ -21,6 +21,7 @@ export function getAllFields(form: FormDto) {
   );
 }
 
+/** get a field by id */
 export function getFieldById(
   form: FormDto,
   id?: string,
@@ -41,8 +42,8 @@ export function getAllFieldsOnPage(page: FormPageDto): FormFieldDto[] {
     ?.flatMap((column) => column?.fields) as FormFieldDto[];
 }
 
-/** get all fields in the form definition that are visible to the user */
-export function getAllFieldsFilteredByConditions<TData extends BaseSchema>(
+/** walks the form definition and returns all fields that are visible to the user */
+export function filterFieldsByConditions<TData extends BaseSchema>(
   form: FormDto,
   data: TData,
   config: UmbracoFormConfig,
@@ -57,24 +58,4 @@ export function getAllFieldsFilteredByConditions<TData extends BaseSchema>(
     ?.flatMap((fieldset) => fieldset?.columns)
     ?.flatMap((column) => column?.fields)
     ?.filter(checkCondition) as FormFieldDto[];
-}
-
-/** get evaluated condition rules for a given page, fieldset or field */
-export function evaluateCondition<TData extends BaseSchema>(
-  dto: DtoWithCondition,
-  form: FormDto,
-  data: TData,
-  config: UmbracoFormConfig,
-): boolean {
-  const isFulfilled = validateConditionRules(dto, form, data, config);
-
-  if (dto?.condition?.actionType === "Show") {
-    return isFulfilled;
-  }
-
-  if (dto?.condition?.actionType === "Hide") {
-    return !isFulfilled;
-  }
-
-  return true;
 }

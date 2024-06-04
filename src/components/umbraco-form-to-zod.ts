@@ -1,20 +1,5 @@
 import { z } from "zod";
-import { exhaustiveCheck, getAllFieldsFilteredByConditions } from "./utils";
-import {
-  ZodLiteral,
-  ZodTypeAny,
-  ZodString,
-  ZodNumber,
-  ZodDate,
-  ZodBoolean,
-  ZodNativeEnum,
-  ZodEnum,
-  ZodOptional,
-  ZodDefault,
-  ZodArray,
-  ZodEffects,
-  ZodObject,
-} from "zod";
+import { exhaustiveCheck, filterFieldsByConditions } from "./utils";
 import type {
   FormFieldDto,
   FormDto,
@@ -24,6 +9,7 @@ import type {
   BaseSchema,
 } from "./types";
 
+/** map umbraco form fields to zod type */
 export function mapFieldToZod(
   field?: FormFieldDto,
   mapCustomFieldToZodType?: MapFormFieldToZod,
@@ -84,6 +70,7 @@ export function mapFieldToZod(
   return zodType;
 }
 
+/** converts a form definition to a zod schema */
 export function umbracoFormToZod(
   form: FormDto,
   config?: Omit<UmbracoFormConfig, "schema">,
@@ -108,22 +95,19 @@ export function umbracoFormToZod(
   return z.object({ ...mappedFields });
 }
 
-export function omitConditionalFields<TData extends BaseSchema>(
+/** omit fields from data that are not visible to the user */
+export function omitFieldsBasedOnConditionFromData<TData extends BaseSchema>(
   form: FormDto,
   data: TData = {} as TData,
   config: UmbracoFormConfig,
 ) {
   let output: Record<string, unknown> = {};
-  const allAvailableFields = getAllFieldsFilteredByConditions(
-    form,
-    data,
-    config,
-  );
-  for (let key of Object.keys(data)) {
-    if (allAvailableFields.find((field) => field.alias === key)) {
-      output[key] = data[key];
+  const visibleFields = filterFieldsByConditions(form, data, config);
+  visibleFields.forEach((field) => {
+    if (field.alias) {
+      output[field.alias] = data[field.alias];
     }
-  }
+  });
   return output as Partial<TData>;
 }
 
@@ -146,7 +130,7 @@ export function coerceRuleValue(def: z.ZodTypeAny, value: unknown): any {
   const baseShape = findBaseDef(def);
 
   // handle specific rule values from Umbraco
-  if (baseShape instanceof ZodBoolean) {
+  if (baseShape instanceof z.ZodBoolean) {
     if (typeof value === "string") {
       switch (value) {
         case "true":
@@ -163,49 +147,49 @@ export function coerceRuleValue(def: z.ZodTypeAny, value: unknown): any {
 }
 
 /** recursively find the base definition for a given ZodType */
-function findBaseDef(def: ZodTypeAny) {
-  if (def instanceof ZodOptional || def instanceof ZodDefault) {
+function findBaseDef(def: z.ZodTypeAny) {
+  if (def instanceof z.ZodOptional || def instanceof z.ZodDefault) {
     return findBaseDef(def._def.innerType);
-  } else if (def instanceof ZodArray) {
+  } else if (def instanceof z.ZodArray) {
     return findBaseDef(def.element);
-  } else if (def instanceof ZodEffects) {
+  } else if (def instanceof z.ZodEffects) {
     return findBaseDef(def._def.schema);
   }
   return def;
 }
 
-function processDef(def: ZodTypeAny, o: any, key: string, value: string) {
+function processDef(def: z.ZodTypeAny, o: any, key: string, value: string) {
   let parsedValue: any;
-  if (def instanceof ZodString || def instanceof ZodLiteral) {
+  if (def instanceof z.ZodString || def instanceof z.ZodLiteral) {
     parsedValue = value;
-  } else if (def instanceof ZodNumber) {
+  } else if (def instanceof z.ZodNumber) {
     const num = Number(value);
     parsedValue = isNaN(num) ? value : num;
-  } else if (def instanceof ZodDate) {
+  } else if (def instanceof z.ZodDate) {
     const date = Date.parse(value);
     parsedValue = isNaN(date) ? value : new Date(date);
-  } else if (def instanceof ZodBoolean) {
+  } else if (def instanceof z.ZodBoolean) {
     parsedValue =
       value === "true" || value === ""
         ? true
         : value === "false"
           ? false
           : Boolean(value);
-  } else if (def instanceof ZodNativeEnum || def instanceof ZodEnum) {
+  } else if (def instanceof z.ZodNativeEnum || def instanceof z.ZodEnum) {
     parsedValue = value;
-  } else if (def instanceof ZodOptional || def instanceof ZodDefault) {
+  } else if (def instanceof z.ZodOptional || def instanceof z.ZodDefault) {
     // def._def.innerType is the same as ZodOptional's .unwrap(), which unfortunately doesn't exist on ZodDefault
     processDef(def._def.innerType, o, key, value);
     // return here to prevent overwriting the result of the recursive call
     return;
-  } else if (def instanceof ZodArray) {
+  } else if (def instanceof z.ZodArray) {
     if (o[key] === undefined) {
       o[key] = [];
     }
     processDef(def.element, o, key, value);
     // return here since recursive call will add to array
     return;
-  } else if (def instanceof ZodEffects) {
+  } else if (def instanceof z.ZodEffects) {
     processDef(def._def.schema, o, key, value);
     return;
   } else {
@@ -221,11 +205,11 @@ function processDef(def: ZodTypeAny, o: any, key: string, value: string) {
 function parseParams(o: any, schema: any, key: string, value: any) {
   // find actual shape definition for this key
   let shape = schema;
-  while (shape instanceof ZodObject || shape instanceof ZodEffects) {
+  while (shape instanceof z.ZodObject || shape instanceof z.ZodEffects) {
     shape =
-      shape instanceof ZodObject
+      shape instanceof z.ZodObject
         ? shape.shape
-        : shape instanceof ZodEffects
+        : shape instanceof z.ZodEffects
           ? shape._def.schema
           : null;
     if (shape === null) {

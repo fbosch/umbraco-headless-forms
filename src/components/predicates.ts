@@ -21,6 +21,26 @@ export function shouldShowIndicator(field: FormFieldDto, form: FormDto) {
   }
 }
 
+/** get evaluated condition rules for a given page, fieldset or field */
+export function evaluateCondition<TData extends BaseSchema>(
+  dto: DtoWithCondition,
+  form: FormDto,
+  data: TData,
+  config: UmbracoFormConfig,
+): boolean {
+  const isFulfilled = validateConditionRules(dto, form, data, config);
+
+  if (dto?.condition?.actionType === "Show") {
+    return isFulfilled;
+  }
+
+  if (dto?.condition?.actionType === "Hide") {
+    return !isFulfilled;
+  }
+
+  return true;
+}
+
 export function validateConditionRules<TData extends BaseSchema>(
   dto: DtoWithCondition,
   form: FormDto,

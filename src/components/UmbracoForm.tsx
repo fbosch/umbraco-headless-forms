@@ -16,18 +16,17 @@ import type {
   FormPageDto,
 } from "./types";
 import {
-  evaluateCondition,
   exhaustiveCheck,
   getAllFieldsOnPage,
-  getAllFieldsFilteredByConditions,
+  filterFieldsByConditions,
 } from "./utils";
 import {
   coerceFormData,
   umbracoFormToZod,
-  omitConditionalFields,
+  omitFieldsBasedOnConditionFromData,
 } from "./umbraco-form-to-zod";
 import { ZodIssue } from "zod-validation-error";
-import { shouldShowIndicator } from "./predicates";
+import { shouldShowIndicator, evaluateCondition } from "./predicates";
 
 export interface UmbracoFormProps
   extends React.FormHTMLAttributes<HTMLFormElement> {
@@ -46,7 +45,16 @@ export interface UmbracoFormProps
 }
 
 function DefaultForm({ form, ...rest }: FormProps): React.ReactNode {
-  return <form {...rest} id={"form-" + form.id} name={form.id} />;
+  return (
+    <form
+      method="post"
+      action={`/umbraco/forms/api/v1/entries/${form.id}`}
+      target="_blank"
+      {...rest}
+      id={"form-" + form.id}
+      name={form.id}
+    />
+  );
 }
 
 function DefaultPage({
@@ -310,11 +318,8 @@ function UmbracoForm(props: UmbracoFormProps) {
 
   const validateFormData = useCallback(
     (coercedData: BaseSchema) => {
-      const dataWithConditionalFieldsOmitted = omitConditionalFields(
-        form,
-        coercedData,
-        config,
-      );
+      const dataWithConditionalFieldsOmitted =
+        omitFieldsBasedOnConditionFromData(form, coercedData, config);
       console.log(dataWithConditionalFieldsOmitted);
       const parsedForm = config?.schema?.safeParse(coercedData);
       if (parsedForm?.success) {
@@ -354,7 +359,7 @@ function UmbracoForm(props: UmbracoFormProps) {
       data,
     ).error?.issues?.flatMap((issue) => issue.path.join("."));
 
-    const fieldsWithConditionsMet = getAllFieldsFilteredByConditions(
+    const fieldsWithConditionsMet = filterFieldsByConditions(
       form,
       data,
       config,
@@ -386,7 +391,7 @@ function UmbracoForm(props: UmbracoFormProps) {
       const fieldId = fieldWithIssues.path.join(".");
       if (fieldId) {
         const fieldElement = document.querySelector(
-          'form[] [name="' + fieldId + '"]',
+          '[name="' + fieldId + '"]',
         ) as HTMLInputElement;
         if (fieldElement) {
           fieldElement.focus();
@@ -413,9 +418,9 @@ function UmbracoForm(props: UmbracoFormProps) {
   };
 
   const handleOnSubmit = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
     setSubmitAttempts((prev) => prev + 1);
     if (config.shouldValidate && validateFormData(data).success === false) {
+      e.preventDefault();
       focusFirstInvalidField();
       return;
     }
