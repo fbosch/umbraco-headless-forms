@@ -4,6 +4,7 @@ import type {
   FormFieldDto,
   UmbracoFormConfig,
   FormDto,
+  FormPageDto,
   DtoWithCondition,
   EvaluatedCondition,
 } from "./types";
@@ -33,6 +34,12 @@ export function getFieldByAlias(
   alias?: string,
 ): FormFieldDto | undefined {
   return getAllFields(form)?.find((field) => field?.alias === alias);
+}
+
+export function getAllFieldsOnPage(page: FormPageDto): FormFieldDto[] {
+  return page?.fieldsets
+    ?.flatMap((fieldset) => fieldset?.columns)
+    ?.flatMap((column) => column?.fields) as FormFieldDto[];
 }
 
 /** get all fields in the form definition that are visible to the user */

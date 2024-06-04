@@ -45,7 +45,6 @@ export type MapFormFieldToZod = (field?: FormFieldDto) => z.ZodTypeAny;
 export type ValidationConfig = {
   native: boolean;
   enabled: boolean;
-  on: "submit" | "change";
 };
 
 export type UmbracoFormConfig = {
@@ -55,22 +54,25 @@ export type UmbracoFormConfig = {
   validation?: Partial<ValidationConfig>;
 };
 
-export type FormContext = {
+export type UmbracoFormContext = {
   form: FormDto;
   formData: FormData | undefined;
   config: UmbracoFormConfig;
   submitAttempts: number;
+  currentPage: number;
+  totalPages: number;
 };
 
 export type RenderProps = {
   children: React.ReactNode;
-  context: FormContext;
-} & (
-  | { page: FormPageDto; condition: EvaluatedCondition }
-  | { fieldset: FormFieldsetDto; condition: EvaluatedCondition }
-  | { column: FormFieldsetColumnDto }
-  | { field: FormFieldDto; condition: EvaluatedCondition }
-);
+  context: UmbracoFormContext;
+} & React.HTMLAttributes<HTMLElement> &
+  (
+    | { page: FormPageDto; condition: EvaluatedCondition }
+    | { fieldset: FormFieldsetDto; condition: EvaluatedCondition }
+    | { column: FormFieldsetColumnDto }
+    | { field: FormFieldDto; condition: EvaluatedCondition }
+  );
 
 export type FormProps = {
   form: FormDto;
@@ -78,6 +80,7 @@ export type FormProps = {
 
 export type PageProps = RenderProps & {
   page: FormPageDto;
+  pageIndex: number;
   condition: EvaluatedCondition;
 };
 
@@ -97,5 +100,6 @@ export type FieldProps = RenderProps & {
 };
 
 export type InputProps = Omit<FieldProps, "children" | "condition">;
-
-export type SubmitButtonProps = { context: FormContext };
+export type ButtonProps = {
+  context: UmbracoFormContext;
+} & React.HTMLAttributes<HTMLButtonElement>;

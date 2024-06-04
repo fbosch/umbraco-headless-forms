@@ -9,7 +9,7 @@ import type {
 import { getFieldById, exhaustiveCheck } from "./utils";
 import { mapFieldToZod, coerceRuleValue } from "./umbraco-form-to-zod";
 
-export function showIndicator(field: FormFieldDto, form: FormDto) {
+export function shouldShowIndicator(field: FormFieldDto, form: FormDto) {
   if (form.fieldIndicationType === "NoIndicator") {
     return false;
   }

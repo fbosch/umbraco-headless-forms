@@ -1,7 +1,7 @@
 import React, { Fragment, useCallback, useState } from "react";
 import type {
   BaseSchema,
-  FormContext,
+  UmbracoFormContext,
   UmbracoFormConfig,
   DefaultFormFieldTypeName,
   FormDto,
@@ -11,17 +11,23 @@ import type {
   InputProps,
   FieldsetProps,
   FieldProps,
-  SubmitButtonProps,
+  ButtonProps,
   DtoWithCondition,
+  FormPageDto,
 } from "./types";
-import { evaluateCondition, exhaustiveCheck } from "./utils";
+import {
+  evaluateCondition,
+  exhaustiveCheck,
+  getAllFieldsOnPage,
+  getAllFieldsFilteredByConditions,
+} from "./utils";
 import {
   coerceFormData,
   umbracoFormToZod,
   omitConditionalFields,
 } from "./umbraco-form-to-zod";
 import { ZodIssue } from "zod-validation-error";
-import { showIndicator } from "./predicates";
+import { shouldShowIndicator } from "./predicates";
 
 export interface UmbracoFormProps
   extends React.FormHTMLAttributes<HTMLFormElement> {
@@ -34,7 +40,9 @@ export interface UmbracoFormProps
   renderColumn?: (props: ColumnProps) => React.ReactNode;
   renderField?: (props: FieldProps) => React.ReactNode;
   renderInput?: (props: InputProps) => React.ReactNode | undefined;
-  renderSubmit?: (props: SubmitButtonProps) => React.ReactNode;
+  renderSubmit?: (props: ButtonProps) => React.ReactNode;
+  renderNextButton?: (props: ButtonProps) => React.ReactNode;
+  renderPreviousButton?: (props: ButtonProps) => React.ReactNode;
 }
 
 function DefaultForm({ form, ...rest }: FormProps): React.ReactNode {
@@ -43,10 +51,15 @@ function DefaultForm({ form, ...rest }: FormProps): React.ReactNode {
 
 function DefaultPage({
   page,
+  pageIndex,
   children,
   condition,
+  context,
 }: PageProps): React.ReactNode {
   if (condition.hide) return null;
+  if (context.totalPages > 1 && context.currentPage !== pageIndex) {
+    return null;
+  }
   return (
     <Fragment>
       {page.caption ? <h2>{page.caption}</h2> : null}
@@ -89,7 +102,7 @@ function DefaultField({
   const hasIssues = issues && issues.length > 0;
   const showValidationErrors =
     hasIssues && context.form.hideFieldValidation !== true;
-  const indicator = showIndicator(field, context.form)
+  const indicator = shouldShowIndicator(field, context.form)
     ? context.form.indicator
     : "";
   const helpTextId = field.helpText ? "helpText:" + field.id : "";
@@ -107,59 +120,55 @@ function DefaultField({
   );
 }
 
-function DefaultInput({ field, issues, context }: InputProps): React.ReactNode {
+function DefaultInput({
+  field,
+  issues,
+  context,
+  ...rest
+}: InputProps): React.ReactNode {
   const { validation } = context.config ?? {};
   const hasIssues = issues && issues?.length > 0;
 
-  let common = {
+  let attributes = {
     name: field.alias,
     id: field.id,
-    placeholder: field.placeholder ? field.placeholder : undefined,
-    title: field.caption ? field.caption : undefined,
-    autoComplete: field?.settings?.autocompleteAttribute
-      ? field.settings?.autocompleteAttribute
-      : undefined,
-    defaultValue: field?.settings?.defaultValue
-      ? field.settings?.defaultValue
-      : undefined,
+    placeholder: field.placeholder || undefined,
+    title: field.caption || undefined,
+    autoComplete: field?.settings?.autocompleteAttribute || undefined,
+    defaultValue: field?.settings?.defaultValue || undefined,
     required:
       validation?.enabled && validation?.native ? field.required : undefined,
     pattern:
       validation?.enabled && validation?.native
-        ? field.pattern
-          ? field.pattern
-          : undefined
+        ? field.pattern || undefined
         : undefined,
     ["aria-invalid"]: validation?.enabled ? hasIssues : undefined,
     ["aria-errormessage"]:
       validation?.enabled && hasIssues ? issues.at(0)?.message : undefined,
+    ...rest,
   };
-
-  if (validation?.enabled) {
-    common = {
-      ...common,
-    };
-  }
 
   const fieldName = field?.type?.name as DefaultFormFieldTypeName;
 
   switch (fieldName) {
     case "Short answer":
-      return <input type={field?.settings?.fieldType || "text"} {...common} />;
+      return (
+        <input type={field?.settings?.fieldType || "text"} {...attributes} />
+      );
     case "Long answer":
-      return <textarea {...common} />;
+      return <textarea {...attributes} />;
     case "Checkbox":
-      return <input type="checkbox" {...common} />;
+      return <input type="checkbox" {...attributes} />;
     case "Multiple choice":
       return (
         <Fragment>
           {field?.preValues?.map((preValue) => {
-            const id = preValue.value + ":" + common.id;
+            const id = preValue.value + ":" + attributes.id;
             return (
               <Fragment key={id}>
                 <label htmlFor={id}>{preValue.caption}</label>
                 <input
-                  {...common}
+                  {...attributes}
                   id={id}
                   type="radio"
                   value={preValue.value}
@@ -172,12 +181,12 @@ function DefaultInput({ field, issues, context }: InputProps): React.ReactNode {
     case "Dropdown":
       return (
         <select
-          {...common}
+          {...attributes}
           multiple={!!field?.settings?.allowMultipleSelections ?? false}
         >
           {field?.preValues?.map((preValue) => (
             <option
-              key={`${common.id}.${preValue.value}`}
+              key={`${attributes.id}.${preValue.value}`}
               value={preValue.value}
             >
               {preValue.caption}
@@ -186,26 +195,64 @@ function DefaultInput({ field, issues, context }: InputProps): React.ReactNode {
         </select>
       );
     case "Data Consent":
-      return <input type="checkbox" {...common} />;
+      return <input type="checkbox" {...attributes} />;
     case "File upload":
       return (
         <input
           type="file"
-          {...common}
+          {...attributes}
           accept={field?.fileUploadOptions?.allowedUploadExtensions?.join(",")}
         />
       );
     case "Recaptcha2":
-      return <input type="hidden" {...common} />;
+      return <input type="hidden" {...attributes} />;
     case "Recaptcha v3 with score":
-      return <input type="hidden" {...common} />;
+      return <input type="hidden" {...attributes} />;
     default:
       return exhaustiveCheck(fieldName);
   }
 }
 
-function DefaultSubmitButton({ context }: SubmitButtonProps): React.ReactNode {
-  return <button type="submit">{context.form.submitLabel}</button>;
+function DefaultSubmitButton({
+  context,
+  ...rest
+}: ButtonProps): React.ReactNode {
+  if (
+    context.totalPages > 1 &&
+    context.currentPage !== context.totalPages - 1
+  ) {
+    return null;
+  }
+  return (
+    <button type="submit" {...rest}>
+      {context.form.submitLabel}
+    </button>
+  );
+}
+
+function DefaultNextButton({ context, ...rest }: ButtonProps): React.ReactNode {
+  if (context.currentPage === context.totalPages - 1) {
+    return null;
+  }
+  return (
+    <button type="button" {...rest}>
+      Next
+    </button>
+  );
+}
+
+function DefaultPreviousButton({
+  context,
+  ...rest
+}: ButtonProps): React.ReactNode {
+  if (context.currentPage === 0) {
+    return null;
+  }
+  return (
+    <button type="button" {...rest}>
+      Previous
+    </button>
+  );
 }
 
 function UmbracoForm(props: UmbracoFormProps) {
@@ -219,6 +266,8 @@ function UmbracoForm(props: UmbracoFormProps) {
     renderField: Field = DefaultField,
     renderInput: Input = DefaultInput,
     renderSubmit: SubmitButton = DefaultSubmitButton,
+    renderNextButton: NextButton = DefaultNextButton,
+    renderPreviousButton: PreviousButton = DefaultPreviousButton,
     children,
     onChange,
     onSubmit,
@@ -229,9 +278,8 @@ function UmbracoForm(props: UmbracoFormProps) {
     schema: umbracoFormToZod(form, configOverride as UmbracoFormConfig),
     ...configOverride,
     validation: {
-      enabled: true,
+      enabled: false,
       native: false,
-      on: "submit",
       ...configOverride?.validation,
     },
   };
@@ -241,28 +289,32 @@ function UmbracoForm(props: UmbracoFormProps) {
   const [formData, setFormData] = useState<FormData | undefined>(undefined);
   const [data, setData] = useState<BaseSchema>({});
   const [formIssues, setFormIssues] = useState<ZodIssue[]>([]);
+  const [currentPage, setCurrentPage] = useState(0);
+  const checkCondition = useCallback(
+    (dto: DtoWithCondition) => evaluateCondition(dto, form, data, config),
+    [form, data, config],
+  );
+
+  const totalPages =
+    form?.pages?.filter((page) => checkCondition(page).show).length ?? 1;
 
   const validateFormData = useCallback(
     (coercedData: BaseSchema) => {
-      if (config?.validation?.enabled) {
-        const dataWithConditionalFieldsOmitted = omitConditionalFields(
-          form,
-          coercedData,
-          config,
-        );
-        console.log(dataWithConditionalFieldsOmitted);
-        const parsedForm = config?.schema?.safeParse(coercedData);
-        if (parsedForm?.success) {
-          setFormIssues([]);
-          return true;
-        } else if (parsedForm?.error?.issues) {
-          setFormIssues(parsedForm.error.issues);
-          return false;
-        }
+      const dataWithConditionalFieldsOmitted = omitConditionalFields(
+        form,
+        coercedData,
+        config,
+      );
+      console.log(dataWithConditionalFieldsOmitted);
+      const parsedForm = config?.schema?.safeParse(coercedData);
+      if (parsedForm?.success) {
+        setFormIssues([]);
+      } else if (parsedForm?.error?.issues) {
+        setFormIssues(parsedForm.error.issues);
       }
-      return true;
+      return parsedForm;
     },
-    [form, config],
+    [form],
   );
 
   const handleOnChange = (e: React.ChangeEvent<HTMLFormElement>) => {
@@ -270,10 +322,10 @@ function UmbracoForm(props: UmbracoFormProps) {
     const coercedData = coerceFormData(formData, config);
     setFormData(formData);
     setData(coercedData);
-
     if (
-      (config?.validation?.on === "change" || submitAttempts > 0) &&
-      validateFormData(coercedData) === false
+      config.validation?.enabled &&
+      submitAttempts > 0 &&
+      validateFormData(coercedData).success === false
     ) {
       return;
     }
@@ -282,12 +334,62 @@ function UmbracoForm(props: UmbracoFormProps) {
     }
   };
 
+  const activePageDefinition = form?.pages?.[currentPage] as FormPageDto;
+
+  const isCurrentPageValid = useCallback(() => {
+    if (config.validation?.enabled === false) {
+      return true;
+    }
+    const fieldAliasesWithIssues = validateFormData(
+      data,
+    ).error?.issues?.flatMap((issue) => issue.path.join("."));
+
+    const fieldsWithConditionsMet = getAllFieldsFilteredByConditions(
+      form,
+      data,
+      config,
+    ).map((field) => field.alias);
+
+    // get all fields on the current page and filter out fields with conditions that are not met
+    // so that they wont block the user from going to the next page
+    const fieldsOnPage = getAllFieldsOnPage(activePageDefinition)
+      .map((field) => field.alias)
+      .filter((field) => fieldsWithConditionsMet.includes(field));
+
+    if (
+      fieldsOnPage.some(
+        (field) => field && fieldAliasesWithIssues?.includes(field),
+      )
+    ) {
+      // prevent user from going to next page if there are fields with issues on the current page
+
+      return false;
+    }
+    return true;
+  }, [form, data, config, currentPage]);
+
+  const handleNextPage = (e: React.MouseEvent<HTMLButtonElement>) => {
+    e.preventDefault();
+    if (isCurrentPageValid() === false) {
+      return;
+    }
+    setCurrentPage((prev) => prev + 1);
+  };
+
+  const handlePreviousPage = (e: React.MouseEvent<HTMLButtonElement>) => {
+    e.preventDefault();
+    if (currentPage === 0) {
+      return;
+    }
+    setCurrentPage((prev) => prev - 1);
+  };
+
   const handleOnSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setSubmitAttempts((prev) => prev + 1);
     if (
-      config?.validation?.on === "submit" &&
-      validateFormData(data) === false
+      config.validation?.enabled &&
+      validateFormData(data).success === false
     ) {
       return;
     }
@@ -296,11 +398,14 @@ function UmbracoForm(props: UmbracoFormProps) {
     }
   };
 
-  const context: FormContext = { form, formData, config, submitAttempts };
-  const checkCondition = useCallback(
-    (dto: DtoWithCondition) => evaluateCondition(dto, form, data, config),
-    [data, form, config],
-  );
+  const context: UmbracoFormContext = {
+    form,
+    formData,
+    config,
+    submitAttempts,
+    totalPages,
+    currentPage,
+  };
 
   return (
     <Form
@@ -313,6 +418,7 @@ function UmbracoForm(props: UmbracoFormProps) {
         <Page
           key={"page." + index}
           page={page}
+          pageIndex={index}
           context={context}
           condition={checkCondition(page)}
         >
@@ -361,6 +467,12 @@ function UmbracoForm(props: UmbracoFormProps) {
         </Page>
       ))}
       {children}
+      {totalPages > 1 ? (
+        <Fragment>
+          <PreviousButton context={context} onClick={handlePreviousPage} />
+          <NextButton context={context} onClick={handleNextPage} />
+        </Fragment>
+      ) : null}
       <SubmitButton context={context} />
     </Form>
   );

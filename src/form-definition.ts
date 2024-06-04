@@ -291,6 +291,9 @@ export default {
         },
       ],
     },
+    {
+      caption: "Confirmation",
+    },
   ],
   previousLabel: "Previous",
   showValidationSummary: false,

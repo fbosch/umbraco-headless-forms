@@ -14,6 +14,9 @@ importers:
       react-dom:
         specifier: ^18.2.0
         version: 18.3.1(react@18.3.1)
+      tailwindcss-aria-attributes:
+        specifier: ^2.0.1
+        version: 2.0.1(tailwindcss@3.4.3)
       zod:
         specifier: ^3.23.8
         version: 3.23.8
@@ -1190,6 +1193,12 @@ packages:
     resolution: {integrity: sha512-ot0WnXS9fgdkgIcePe6RHNk1WA8+muPa6cSjeR3V8K27q9BB1rTE3R1p7Hv0z1ZyAc8s6Vvv8DIyWf681MAt0w==}
     engines: {node: '>= 0.4'}
 
+  tailwindcss-aria-attributes@2.0.1:
+    resolution: {integrity: sha512-MbU3dempvd2T1cTs4y6qSK4fxkj3TcN764PNWgVzOwBsn57OZmeYxUUzkVKLMV0xhlSLISvG+PdVbtzgVtfxQw==}
+    engines: {node: '>=18'}
+    peerDependencies:
+      tailwindcss: '>=2.2'
+
   tailwindcss@3.4.3:
     resolution: {integrity: sha512-U7sxQk/n397Bmx4JHbJx/iSOOv5G+II3f1kpLpY2QeUv5DcPdcTsYLlusZfq1NthHS1c1cZoyFmmkex1rzke0A==}
     engines: {node: '>=14.0.0'}
@@ -2340,6 +2349,10 @@ snapshots:
       has-flag: 4.0.0
 
   supports-preserve-symlinks-flag@1.0.0: {}
+
+  tailwindcss-aria-attributes@2.0.1(tailwindcss@3.4.3):
+    dependencies:
+      tailwindcss: 3.4.3
 
   tailwindcss@3.4.3:
     dependencies:
