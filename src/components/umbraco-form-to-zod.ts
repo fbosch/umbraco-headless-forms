@@ -52,21 +52,16 @@ export function mapFieldToZod(
     case "Data Consent":
     case "Recaptcha2":
     case "Recaptcha v3 with score":
-      return z
-        .boolean({
-          coerce: true,
-        })
-        .refine(
-          (value) => {
-            if (field?.required === true) {
-              return value === true;
-            }
-            return !!value;
-          },
-          {
-            message: field?.requiredErrorMessage,
-          },
-        );
+      zodType = z.boolean({
+        coerce: true,
+      });
+      if (field?.required) {
+        zodType = zodType.refine((value) => value === true, {
+          message: field?.requiredErrorMessage,
+        });
+        return zodType;
+      }
+      break;
     default:
       if (typeof mapCustomFieldToZodType === "function") {
         try {
