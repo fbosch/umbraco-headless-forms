@@ -105,9 +105,6 @@ function UmbracoForm(props: UmbracoFormProps) {
 
   const validateFormData = useCallback(
     (coercedData: z.infer<typeof config.schema>) => {
-      const dataWithConditionalFieldsOmitted =
-        omitFieldsBasedOnConditionFromData(form, coercedData, config);
-      console.log(dataWithConditionalFieldsOmitted);
       const parsedForm = config?.schema?.safeParse(coercedData);
       if (parsedForm?.success) {
         setFormIssues([]);

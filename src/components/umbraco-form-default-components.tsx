@@ -139,11 +139,16 @@ export function DefaultInput({
   };
 
   return match(field?.type?.name)
-    .with("Short answer", () => <input {...attributes} />)
+    .with(
+      "Short answer",
+      "Checkbox",
+      "Data Consent",
+      "File upload",
+      "Recaptcha2",
+      "Recaptcha v3 with score",
+      () => <input {...attributes} />,
+    )
     .with("Long answer", () => <textarea {...attributes} />)
-    .with("Checkbox", "Data Consent", () => (
-      <input type="checkbox" {...attributes} />
-    ))
     .with("Multiple choice", (typeName) => (
       <Fragment>
         {field?.preValues?.map((preValue) => {
@@ -173,10 +178,6 @@ export function DefaultInput({
           </option>
         ))}
       </select>
-    ))
-    .with("File upload", () => <input type="file" {...attributes} />)
-    .with("Recaptcha2", "Recaptcha v3 with score", () => (
-      <input type="hidden" {...attributes} />
     ))
     .exhaustive();
 }

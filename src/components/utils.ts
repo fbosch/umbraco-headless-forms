@@ -144,11 +144,26 @@ export function getAttributesForFieldType(
           : undefined,
       } satisfies React.TextareaHTMLAttributes<HTMLTextAreaElement>;
     })
+    .with("Multiple choice", () => ({
+      type: "radio",
+      ...commonAttributes,
+    }))
     .with(
       "Checkbox",
+      "Data Consent",
       () =>
         ({
+          type: "checkbox",
           defaultChecked: !!defaultValue,
+          ...commonAttributes,
+        }) satisfies React.InputHTMLAttributes<HTMLInputElement>,
+    )
+    .with(
+      "Recaptcha2",
+      "Recaptcha v3 with score",
+      () =>
+        ({
+          type: "hidden",
           ...commonAttributes,
         }) satisfies React.InputHTMLAttributes<HTMLInputElement>,
     )
@@ -165,6 +180,7 @@ export function getAttributesForFieldType(
       "File upload",
       () =>
         ({
+          type: "file",
           ...commonAttributes,
           accept: field?.fileUploadOptions?.allowedUploadExtensions?.join(","),
         }) satisfies React.InputHTMLAttributes<HTMLInputElement>,
