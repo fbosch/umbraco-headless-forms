@@ -17,41 +17,36 @@ const DEFAULT_FORM_FIELD_TYPE_NAMES = [
 export type DefaultFormFieldTypeName =
   (typeof DEFAULT_FORM_FIELD_TYPE_NAMES)[number];
 
-/** default schema types */
-export type FormDto = Omit<components["schemas"]["FormDto"], "pages"> & {
+export interface FormDto
+  extends Omit<components["schemas"]["FormDto"], "pages"> {
   pages?: FormPageDto[];
-};
-export type FormPageDto = Omit<
-  components["schemas"]["FormPageDto"],
-  "fieldsets"
-> & {
+}
+
+export interface FormPageDto
+  extends Omit<components["schemas"]["FormPageDto"], "fieldsets"> {
   fieldsets?: FormFieldsetDto[];
-};
-export type FormFieldsetDto = Omit<
-  components["schemas"]["FormFieldsetDto"],
-  "columns"
-> & {
+}
+
+export interface FormFieldsetDto
+  extends Omit<components["schemas"]["FormFieldsetDto"], "columns"> {
   columns?: FormFieldsetColumnDto[];
-};
-export type FormFieldsetColumnDto = Omit<
-  components["schemas"]["FormFieldsetColumnDto"],
-  "fields"
-> & {
+}
+
+export interface FormFieldsetColumnDto
+  extends Omit<components["schemas"]["FormFieldsetColumnDto"], "fields"> {
   fields?: FormFieldDto[];
-};
-export type FormFieldTypeDto = Omit<
-  components["schemas"]["FormFieldTypeDto"],
-  "name"
-> & {
+}
+
+export interface FormFieldTypeDto
+  extends Omit<components["schemas"]["FormFieldTypeDto"], "name"> {
   name: DefaultFormFieldTypeName;
-};
-export type FormFieldDto = Omit<
-  components["schemas"]["FormFieldDto"],
-  "type"
-> & {
+}
+
+export interface FormFieldDto
+  extends Omit<components["schemas"]["FormFieldDto"], "type" | "settings"> {
   type: FormFieldTypeDto;
   settings?: UmbracoFormFieldSettingsMap[DefaultFormFieldTypeName];
-};
+}
 
 export type FormConditionDto = components["schemas"]["FormConditionDto"];
 export type FieldConditionActionType =
@@ -97,6 +92,7 @@ export interface UmbracoFormFieldSettingsMap {
   "Multiple choice": {
     defaultValue: string;
     showLabel: string;
+    preValues: Array<any>;
   };
   "Data Consent": {
     acceptCopy: string;
