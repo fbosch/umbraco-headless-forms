@@ -1,3 +1,4 @@
+import { match } from "ts-pattern";
 import { isConditionFulfilled } from "./predicates";
 import type {
   FormShape,
@@ -6,7 +7,9 @@ import type {
   FormDto,
   FormPageDto,
   DtoWithCondition,
+  UmbracoFormFieldSettingsMap,
 } from "./types";
+import { z } from "zod";
 
 export function exhaustiveCheck(value: never): never {
   throw new Error("Exhaustive check failed for value: " + value);
@@ -60,4 +63,111 @@ export function filterFieldsByConditions<TData extends FormShape>(
     ?.flatMap((fieldset) => fieldset?.columns)
     ?.flatMap((column) => column?.fields)
     ?.filter(checkCondition) as FormFieldDto[];
+}
+
+type CommonAttributes = React.InputHTMLAttributes<HTMLInputElement> &
+  React.TextareaHTMLAttributes<HTMLTextAreaElement> &
+  React.SelectHTMLAttributes<HTMLSelectElement>;
+
+export function getAttributesForFieldType(
+  field: FormFieldDto,
+  issues: z.ZodIssue[] | undefined,
+  config: UmbracoFormConfig,
+) {
+  const { shouldValidate, shouldUseNativeValidation } = config;
+  const hasIssues = issues && issues?.length > 0;
+  const validate = shouldValidate && shouldUseNativeValidation;
+
+  const commonAttributes: CommonAttributes = {
+    name: field.alias,
+    id: field.id,
+    required: validate && field.required ? field.required : undefined,
+    ["aria-invalid"]: validate ? hasIssues : undefined,
+    ["aria-errormessage"]:
+      validate && hasIssues ? issues.at(0)?.message : undefined,
+  };
+
+  const defaultValue = match(field?.type?.name)
+    .with(
+      "Short answer",
+      "Long answer",
+      "Checkbox",
+      "Multiple choice",
+      "Dropdown",
+      (typeName) => {
+        const settings =
+          field?.settings as UmbracoFormFieldSettingsMap[typeof typeName];
+
+        return settings?.defaultValue || undefined;
+      },
+    )
+    .otherwise(() => undefined);
+
+  const textAttributes = match(field?.type?.name).with(
+    "Short answer",
+    "Long answer",
+    (typeName) => {
+      const settings =
+        field?.settings as UmbracoFormFieldSettingsMap[typeof typeName];
+      return {
+        autoComplete: settings?.autocompleteAttribute || undefined,
+        placeholder: field.placeholder || undefined,
+        pattern: validate && field.pattern ? field.pattern : undefined,
+        maxLength:
+          validate && settings?.maximumLength
+            ? parseInt(settings?.maximumLength)
+            : undefined,
+      };
+    },
+  );
+
+  return match(field?.type?.name)
+    .with("Short answer", (typeName) => {
+      const settings =
+        field?.settings as UmbracoFormFieldSettingsMap[typeof typeName];
+      return {
+        type: settings?.fieldType || "text",
+        ...commonAttributes,
+        defaultValue,
+        ...textAttributes,
+      } satisfies React.InputHTMLAttributes<HTMLInputElement>;
+    })
+    .with("Long answer", (typeName) => {
+      const settings =
+        field?.settings as UmbracoFormFieldSettingsMap[typeof typeName];
+      return {
+        defaultValue,
+        ...textAttributes,
+        ...commonAttributes,
+        rows: settings?.numberOfRows
+          ? parseInt(settings.numberOfRows)
+          : undefined,
+      } satisfies React.TextareaHTMLAttributes<HTMLTextAreaElement>;
+    })
+    .with(
+      "Checkbox",
+      () =>
+        ({
+          defaultChecked: !!defaultValue,
+          ...commonAttributes,
+        }) satisfies React.InputHTMLAttributes<HTMLInputElement>,
+    )
+    .with("Dropdown", (typeName) => {
+      const settings =
+        field?.settings as UmbracoFormFieldSettingsMap[typeof typeName];
+      return {
+        defaultValue,
+        ...commonAttributes,
+        multiple: !!settings?.allowMultipleSelections ?? false,
+      } satisfies React.SelectHTMLAttributes<HTMLSelectElement>;
+    })
+    .with(
+      "File upload",
+      () =>
+        ({
+          ...commonAttributes,
+          accept: field?.fileUploadOptions?.allowedUploadExtensions?.join(","),
+        }) satisfies React.InputHTMLAttributes<HTMLInputElement>,
+    )
+    .otherwise(() => commonAttributes);
 }

@@ -1,5 +1,4 @@
 import React, { Fragment } from "react";
-import { exhaustiveCheck } from "./utils";
 import { shouldShowIndicator } from "./predicates";
 import { match } from "ts-pattern";
 import type {
@@ -13,6 +12,7 @@ import type {
   UmbracoFormFieldSettingsMap,
 } from "./types";
 import { useUmbracoFormContext } from "./UmbracoForm";
+import { getAttributesForFieldType } from "./utils";
 
 export function DefaultForm({ form, ...rest }: FormProps): React.ReactNode {
   return (
@@ -127,99 +127,35 @@ export function DefaultInput({
   ...rest
 }: InputProps): React.ReactNode {
   const context = useUmbracoFormContext();
-  const { shouldValidate, shouldUseNativeValidation } = context.config;
-  const hasIssues = issues && issues?.length > 0;
-  const validate = shouldValidate && shouldUseNativeValidation;
+  const fieldAttributes = getAttributesForFieldType(
+    field,
+    issues,
+    context.config,
+  );
 
-  let commonAttributes = {
-    name: field.alias,
-    id: field.id,
-    required: validate && field.required ? field.required : undefined,
-    ["aria-invalid"]: validate ? hasIssues : undefined,
-    ["aria-errormessage"]:
-      validate && hasIssues ? issues.at(0)?.message : undefined,
+  const attributes = {
+    ...fieldAttributes,
     ...rest,
   };
 
-  const defaultValue = match(field?.type?.name)
-    .with(
-      "Short answer",
-      "Long answer",
-      "Checkbox",
-      "Multiple choice",
-      "Dropdown",
-      (typeName) => {
-        const settings =
-          field?.settings as UmbracoFormFieldSettingsMap[typeof typeName];
-
-        return settings?.defaultValue || undefined;
-      },
-    )
-    .otherwise(() => undefined);
-
-  const textAttributes = match(field?.type?.name).with(
-    "Short answer",
-    "Long answer",
-    (typeName) => {
-      const settings =
-        field?.settings as UmbracoFormFieldSettingsMap[typeof typeName];
-      return {
-        autoComplete: settings?.autocompleteAttribute || undefined,
-        placeholder: field.placeholder || undefined,
-        pattern: validate && field.pattern ? field.pattern : undefined,
-        maxLength:
-          validate && settings?.maximumLength
-            ? parseInt(settings?.maximumLength)
-            : undefined,
-      };
-    },
-  );
-
   return match(field?.type?.name)
-    .with("Short answer", (typeName) => {
-      const settings =
-        field?.settings as UmbracoFormFieldSettingsMap[typeof typeName];
-      return (
-        <input
-          type={settings?.fieldType || "text"}
-          defaultValue={defaultValue}
-          {...textAttributes}
-          {...commonAttributes}
-        />
-      );
-    })
-    .with("Long answer", (typeName) => {
-      const settings =
-        field?.settings as UmbracoFormFieldSettingsMap[typeof typeName];
-      return (
-        <textarea
-          defaultValue={defaultValue}
-          {...textAttributes}
-          {...commonAttributes}
-          rows={
-            settings?.numberOfRows ? parseInt(settings.numberOfRows) : undefined
-          }
-        />
-      );
-    })
-    .with("Checkbox", () => (
-      <input
-        type="checkbox"
-        defaultValue={defaultValue}
-        {...commonAttributes}
-      />
+    .with("Short answer", () => <input {...attributes} />)
+    .with("Long answer", () => <textarea {...attributes} />)
+    .with("Checkbox", "Data Consent", () => (
+      <input type="checkbox" {...attributes} />
     ))
-    .with("Multiple choice", () => (
+    .with("Multiple choice", (typeName) => (
       <Fragment>
         {field?.preValues?.map((preValue) => {
-          const id = preValue.value + ":" + commonAttributes.id;
+          const settings =
+            field?.settings as UmbracoFormFieldSettingsMap[typeof typeName];
+          const id = preValue.value + ":" + field.id;
           return (
             <Fragment key={id}>
               <label htmlFor={id}>{preValue.caption}</label>
               <input
-                defaultChecked={defaultValue === preValue.value}
-                {...textAttributes}
-                {...commonAttributes}
+                defaultChecked={settings.defaultValue === preValue.value}
+                {...attributes}
                 id={id}
                 type="radio"
                 value={preValue.value}
@@ -229,38 +165,18 @@ export function DefaultInput({
         })}
       </Fragment>
     ))
-    .with("Dropdown", (typeName) => {
-      const settings =
-        field?.settings as UmbracoFormFieldSettingsMap[typeof typeName];
-
-      return (
-        <select
-          defaultValue={defaultValue}
-          {...commonAttributes}
-          multiple={!!settings?.allowMultipleSelections ?? false}
-        >
-          {field?.preValues?.map((preValue) => (
-            <option
-              key={`${commonAttributes.id}.${preValue.value}`}
-              value={preValue.value}
-            >
-              {preValue.caption}
-            </option>
-          ))}
-        </select>
-      );
-    })
-    .with("Data Consent", () => <input type="checkbox" {...commonAttributes} />)
-    .with("File upload", () => (
-      <input
-        type="file"
-        {...commonAttributes}
-        accept={field?.fileUploadOptions?.allowedUploadExtensions?.join(",")}
-      />
+    .with("Dropdown", () => (
+      <select {...attributes}>
+        {field?.preValues?.map((preValue) => (
+          <option key={`${field.id}.${preValue.value}`} value={preValue.value}>
+            {preValue.caption}
+          </option>
+        ))}
+      </select>
     ))
-    .with("Recaptcha2", () => <input type="hidden" {...commonAttributes} />)
-    .with("Recaptcha v3 with score", () => (
-      <input type="hidden" {...commonAttributes} />
+    .with("File upload", () => <input type="file" {...attributes} />)
+    .with("Recaptcha2", "Recaptcha v3 with score", () => (
+      <input type="hidden" {...attributes} />
     ))
     .exhaustive();
 }
