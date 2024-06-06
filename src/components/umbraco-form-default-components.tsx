@@ -96,9 +96,10 @@ export function DefaultField({
   ) : null;
 
   if (fieldTypeName === "Multiple choice") {
+    const radioGroupId = "radiogroup:" + field.id;
     return (
-      <fieldset>
-        <legend>
+      <fieldset role="radiogroup" aria-labelledby={radioGroupId}>
+        <legend id={radioGroupId}>
           {field.caption} {indicator}
         </legend>
         {helpText}
@@ -133,17 +134,30 @@ export function DefaultInput({
   let commonAttributes = {
     name: field.alias,
     id: field.id,
-    placeholder: field.placeholder || undefined,
-    title: field.caption || undefined,
     required: validate && field.required ? field.required : undefined,
-    pattern: validate && field.pattern ? field.pattern : undefined,
     ["aria-invalid"]: validate ? hasIssues : undefined,
     ["aria-errormessage"]:
       validate && hasIssues ? issues.at(0)?.message : undefined,
     ...rest,
   };
 
-  const inputAttributes = match(field?.type?.name).with(
+  const defaultValue = match(field?.type?.name)
+    .with(
+      "Short answer",
+      "Long answer",
+      "Checkbox",
+      "Multiple choice",
+      "Dropdown",
+      (typeName) => {
+        const settings =
+          field?.settings as UmbracoFormFieldSettingsMap[typeof typeName];
+
+        return settings?.defaultValue || undefined;
+      },
+    )
+    .otherwise(() => undefined);
+
+  const textAttributes = match(field?.type?.name).with(
     "Short answer",
     "Long answer",
     (typeName) => {
@@ -151,7 +165,8 @@ export function DefaultInput({
         field?.settings as UmbracoFormFieldSettingsMap[typeof typeName];
       return {
         autoComplete: settings?.autocompleteAttribute || undefined,
-        defaultValue: settings?.defaultValue || undefined,
+        placeholder: field.placeholder || undefined,
+        pattern: validate && field.pattern ? field.pattern : undefined,
         maxLength:
           validate && settings?.maximumLength
             ? parseInt(settings?.maximumLength)
@@ -167,7 +182,8 @@ export function DefaultInput({
       return (
         <input
           type={settings?.fieldType || "text"}
-          {...inputAttributes}
+          defaultValue={defaultValue}
+          {...textAttributes}
           {...commonAttributes}
         />
       );
@@ -177,7 +193,8 @@ export function DefaultInput({
         field?.settings as UmbracoFormFieldSettingsMap[typeof typeName];
       return (
         <textarea
-          {...inputAttributes}
+          defaultValue={defaultValue}
+          {...textAttributes}
           {...commonAttributes}
           rows={
             settings?.numberOfRows ? parseInt(settings.numberOfRows) : undefined
@@ -185,7 +202,13 @@ export function DefaultInput({
         />
       );
     })
-    .with("Checkbox", () => <input type="checkbox" {...commonAttributes} />)
+    .with("Checkbox", () => (
+      <input
+        type="checkbox"
+        defaultValue={defaultValue}
+        {...commonAttributes}
+      />
+    ))
     .with("Multiple choice", () => (
       <Fragment>
         {field?.preValues?.map((preValue) => {
@@ -194,7 +217,8 @@ export function DefaultInput({
             <Fragment key={id}>
               <label htmlFor={id}>{preValue.caption}</label>
               <input
-                {...inputAttributes}
+                defaultChecked={defaultValue === preValue.value}
+                {...textAttributes}
                 {...commonAttributes}
                 id={id}
                 type="radio"
@@ -211,6 +235,7 @@ export function DefaultInput({
 
       return (
         <select
+          defaultValue={defaultValue}
           {...commonAttributes}
           multiple={!!settings?.allowMultipleSelections ?? false}
         >
