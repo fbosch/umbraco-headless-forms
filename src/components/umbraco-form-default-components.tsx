@@ -137,21 +137,32 @@ export function DefaultInput({
     defaultValue: field?.settings?.defaultValue || undefined,
     required: validate && field.required ? field.required : undefined,
     pattern: validate && field.pattern ? field.pattern : undefined,
+    maxLength:
+      validate && field?.settings?.maximumLength
+        ? parseInt(field?.settings?.maximumLength)
+        : undefined,
     ["aria-invalid"]: validate ? hasIssues : undefined,
     ["aria-errormessage"]:
       validate && hasIssues ? issues.at(0)?.message : undefined,
     ...rest,
   };
 
-  const fieldName = field?.type?.name as DefaultFormFieldTypeName;
-
-  switch (fieldName) {
+  switch (field?.type?.name) {
     case "Short answer":
       return (
         <input type={field?.settings?.fieldType || "text"} {...attributes} />
       );
     case "Long answer":
-      return <textarea {...attributes} />;
+      return (
+        <textarea
+          {...attributes}
+          rows={
+            field?.settings?.numberOfRows
+              ? parseInt(field.settings.numberOfRows)
+              : undefined
+          }
+        />
+      );
     case "Checkbox":
       return <input type="checkbox" {...attributes} />;
     case "Multiple choice":
@@ -204,7 +215,7 @@ export function DefaultInput({
     case "Recaptcha v3 with score":
       return <input type="hidden" {...attributes} />;
     default:
-      return exhaustiveCheck(fieldName);
+      return exhaustiveCheck(field.type.name);
   }
 }
 

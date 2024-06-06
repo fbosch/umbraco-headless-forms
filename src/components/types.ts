@@ -2,14 +2,57 @@ import { z } from "zod";
 import { umbracoFormToZod } from "./umbraco-form-to-zod";
 import type { components } from "./umbraco-form.d.ts";
 
+const DEFAULT_FORM_FIELD_TYPE_NAMES = [
+  "Short answer",
+  "Long answer",
+  "Checkbox",
+  "Dropdown",
+  "Multiple choice",
+  "Data Consent",
+  "File upload",
+  "Recaptcha2",
+  "Recaptcha v3 with score",
+] as const;
+
+export type DefaultFormFieldTypeName =
+  (typeof DEFAULT_FORM_FIELD_TYPE_NAMES)[number];
+
 /** default schema types */
-export type FormDto = components["schemas"]["FormDto"];
-export type FormPageDto = components["schemas"]["FormPageDto"];
-export type FormFieldsetDto = components["schemas"]["FormFieldsetDto"];
-export type FormFieldsetColumnDto =
-  components["schemas"]["FormFieldsetColumnDto"];
-export type FormFieldDto = components["schemas"]["FormFieldDto"];
-export type FormFieldTypeDto = components["schemas"]["FormFieldTypeDto"];
+export type FormDto = Omit<components["schemas"]["FormDto"], "pages"> & {
+  pages?: FormPageDto[];
+};
+export type FormPageDto = Omit<
+  components["schemas"]["FormPageDto"],
+  "fieldsets"
+> & {
+  fieldsets?: FormFieldsetDto[];
+};
+export type FormFieldsetDto = Omit<
+  components["schemas"]["FormFieldsetDto"],
+  "columns"
+> & {
+  columns?: FormFieldsetColumnDto[];
+};
+export type FormFieldsetColumnDto = Omit<
+  components["schemas"]["FormFieldsetColumnDto"],
+  "fields"
+> & {
+  fields?: FormFieldDto[];
+};
+export type FormFieldTypeDto = Omit<
+  components["schemas"]["FormFieldTypeDto"],
+  "name"
+> & {
+  name: DefaultFormFieldTypeName;
+};
+export type FormFieldDto = Omit<
+  components["schemas"]["FormFieldDto"],
+  "type"
+> & {
+  type: FormFieldTypeDto;
+  settings?: UmbracoFormFieldSettingsMap[DefaultFormFieldTypeName];
+};
+
 export type FormConditionDto = components["schemas"]["FormConditionDto"];
 export type FieldConditionActionType =
   components["schemas"]["FieldConditionActionType"];
@@ -22,17 +65,57 @@ export type FormShape = z.infer<ReturnType<typeof umbracoFormToZod>>;
 
 export type DtoWithCondition = FormPageDto | FormFieldsetDto | FormFieldDto;
 
-//** Form field names from default Umbraco form installation */
-export type DefaultFormFieldTypeName =
-  | "Short answer"
-  | "Long answer"
-  | "Checkbox"
-  | "Dropdown"
-  | "Multiple choice"
-  | "Data Consent"
-  | "File upload"
-  | "Recaptcha2"
-  | "Recaptcha v3 with score";
+export interface UmbracoFormFieldSettingsMap {
+  "Short answer": {
+    defaultValue: string;
+    placeholder: string;
+    showLabel: string;
+    maximumLength: string;
+    fieldType: string;
+    autocompleteAttribute: string;
+  };
+  "Long answer": {
+    defaultValue: string;
+    placeholder: string;
+    showLabel: string;
+    autocompleteAttribute: string;
+    numberOfRows: string;
+    maximumLength: string;
+  };
+  Checkbox: {
+    caption: string;
+    defaultValue: string;
+    showLabel: string;
+  };
+  Dropdown: {
+    defaultValue: string;
+    allowMultipleSelections: string;
+    showLabel: string;
+    autocompleteAttribute: string;
+    selectPrompt: string;
+  };
+  "Multiple choice": {
+    defaultValue: string;
+    showLabel: string;
+  };
+  "Data Consent": {
+    acceptCopy: string;
+    showLabel: string;
+  };
+  "File upload": {
+    selectFilesListHeading: string;
+  };
+  Recaptcha2: {
+    theme: string;
+    size: string;
+    errorMessage: string;
+  };
+  "Recaptcha v3 with score": {
+    scoreThreshold: string;
+    errorMessage: string;
+    saveScore: string;
+  };
+}
 
 export type MapFormFieldToZod = (field?: FormFieldDto) => z.ZodTypeAny;
 

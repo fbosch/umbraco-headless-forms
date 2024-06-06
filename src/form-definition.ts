@@ -180,7 +180,7 @@ export default {
                     },
                     {
                       caption: "Yellow",
-                      value: "yello",
+                      value: "yellow",
                     },
                   ],
                   required: false,
