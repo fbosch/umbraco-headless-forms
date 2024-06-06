@@ -48,13 +48,20 @@ export interface FormFieldDto
   settings?: UmbracoFormFieldSettingsMap[DefaultFormFieldTypeName];
 }
 
-export type FormConditionDto = components["schemas"]["FormConditionDto"];
-export type FieldConditionActionType =
-  components["schemas"]["FieldConditionActionType"];
-export type FieldConditionLogicType =
-  components["schemas"]["FieldConditionLogicType"];
-export type FieldConditionRuleOperator =
-  components["schemas"]["FieldConditionRuleOperator"];
+export interface FormConditionDto
+  extends Pick<components["schemas"], "FormConditionDto"> {}
+
+export interface FormConditionRuleDto
+  extends Pick<components["schemas"], "FormConditionRuleDto"> {}
+
+export interface FieldConditionActionType
+  extends Pick<components["schemas"], "FieldConditionActionType"> {}
+
+export interface FieldConditionLogicType
+  extends Pick<components["schemas"], "FieldConditionLogicType"> {}
+
+export interface FieldConditionRuleOperator
+  extends Pick<components["schemas"], "FieldConditionRuleOperator"> {}
 
 export type FormShape = z.infer<ReturnType<typeof umbracoFormToZod>>;
 

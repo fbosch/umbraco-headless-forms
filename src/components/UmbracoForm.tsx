@@ -19,11 +19,7 @@ import type {
   DtoWithCondition,
 } from "./types";
 import { getAllFieldsOnPage, filterFieldsByConditions } from "./utils";
-import {
-  coerceFormData,
-  umbracoFormToZod,
-  omitFieldsBasedOnConditionFromData,
-} from "./umbraco-form-to-zod";
+import { coerceFormData, umbracoFormToZod } from "./umbraco-form-to-zod";
 import { ZodIssue } from "zod";
 import { isConditionFulfilled } from "./predicates";
 import {
