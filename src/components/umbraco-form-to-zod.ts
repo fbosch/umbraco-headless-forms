@@ -1,16 +1,19 @@
 import { z } from "zod";
 import {
-  exhaustiveCheck,
   filterFieldsByConditions,
   getAllFields,
   getFieldByZodIssue,
-} from "./utils";
+} from "./field-utils";
 import type {
   FormFieldDto,
   FormDto,
   DefaultFormFieldTypeName,
   MapFormFieldToZod,
 } from "./types";
+
+export function exhaustiveCheck(value: never): never {
+  throw new Error("Exhaustive check failed for value: " + value);
+}
 
 /** converts a form definition to a zod schema */
 export function umbracoFormToZod(

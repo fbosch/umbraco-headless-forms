@@ -17,26 +17,15 @@ import {
   getAllFieldsOnPage,
   filterFieldsByConditions,
   getFieldByZodIssue,
-} from "./utils";
+} from "./field-utils";
 import {
   coerceFormData,
   sortZodIssuesByFieldAlias,
   umbracoFormToZod,
 } from "./umbraco-form-to-zod";
+import * as defaultComponents from "./default-components";
 import type { ZodIssue } from "zod";
 import { isConditionFulfilled } from "./predicates";
-import {
-  DefaultForm,
-  DefaultPage,
-  DefaultFieldset,
-  DefaultColumn,
-  DefaultField,
-  DefaultInput,
-  DefaultSubmitButton,
-  DefaultNextButton,
-  DefaultPreviousButton,
-  DefaultValidationSummary,
-} from "./umbraco-form-default-components";
 
 type RenderFn<T extends React.JSXElementConstructor<any>> = (
   props: React.ComponentProps<T>,
@@ -46,16 +35,18 @@ export interface UmbracoFormProps
   extends React.FormHTMLAttributes<HTMLFormElement> {
   form: FormDto;
   config?: Partial<UmbracoFormConfig>;
-  renderForm?: RenderFn<typeof DefaultForm>;
-  renderPage?: RenderFn<typeof DefaultPage>;
-  renderFieldset?: RenderFn<typeof DefaultFieldset>;
-  renderColumn?: RenderFn<typeof DefaultColumn>;
-  renderField?: RenderFn<typeof DefaultField>;
-  renderInput?: RenderFn<typeof DefaultInput>;
-  renderValidationSummary?: RenderFn<typeof DefaultValidationSummary>;
-  renderSubmitButton?: RenderFn<typeof DefaultSubmitButton>;
-  renderNextButton?: RenderFn<typeof DefaultNextButton>;
-  renderPreviousButton?: RenderFn<typeof DefaultPreviousButton>;
+  renderForm?: RenderFn<typeof defaultComponents.Form>;
+  renderPage?: RenderFn<typeof defaultComponents.Page>;
+  renderFieldset?: RenderFn<typeof defaultComponents.Fieldset>;
+  renderColumn?: RenderFn<typeof defaultComponents.Column>;
+  renderField?: RenderFn<typeof defaultComponents.Field>;
+  renderInput?: RenderFn<typeof defaultComponents.Input>;
+  renderValidationSummary?: RenderFn<
+    typeof defaultComponents.ValidationSummary
+  >;
+  renderSubmitButton?: RenderFn<typeof defaultComponents.SubmitButton>;
+  renderNextButton?: RenderFn<typeof defaultComponents.NextButton>;
+  renderPreviousButton?: RenderFn<typeof defaultComponents.PreviousButton>;
 }
 
 const UmbracoFormContext = createContext<UmbracoFormContext>(
@@ -69,16 +60,17 @@ function UmbracoForm(props: UmbracoFormProps) {
   const {
     form,
     config: configOverride = {},
-    renderForm: Form = DefaultForm,
-    renderPage: Page = DefaultPage,
-    renderFieldset: Fieldset = DefaultFieldset,
-    renderColumn: Column = DefaultColumn,
-    renderField: Field = DefaultField,
-    renderInput: Input = DefaultInput,
-    renderSubmitButton: SubmitButton = DefaultSubmitButton,
-    renderNextButton: NextButton = DefaultNextButton,
-    renderPreviousButton: PreviousButton = DefaultPreviousButton,
-    renderValidationSummary: ValidationSummary = DefaultValidationSummary,
+    renderForm: Form = defaultComponents.Form,
+    renderPage: Page = defaultComponents.Page,
+    renderFieldset: Fieldset = defaultComponents.Fieldset,
+    renderColumn: Column = defaultComponents.Column,
+    renderField: Field = defaultComponents.Field,
+    renderInput: Input = defaultComponents.Input,
+    renderSubmitButton: SubmitButton = defaultComponents.SubmitButton,
+    renderNextButton: NextButton = defaultComponents.NextButton,
+    renderPreviousButton: PreviousButton = defaultComponents.PreviousButton,
+    renderValidationSummary:
+      ValidationSummary = defaultComponents.ValidationSummary,
     children,
     onChange,
     onSubmit,
@@ -361,7 +353,7 @@ function UmbracoForm(props: UmbracoFormProps) {
                         >
                           {
                             // fallback to default component if custom component returns undefined
-                            Input(inputProps) ?? DefaultInput(inputProps)
+                            Input(inputProps) ?? Input(inputProps)
                           }
                         </Field>
                       );
@@ -385,12 +377,12 @@ function UmbracoForm(props: UmbracoFormProps) {
   );
 }
 
-UmbracoForm.Input = DefaultInput;
-UmbracoForm.Page = DefaultPage;
-UmbracoForm.Fieldset = DefaultFieldset;
-UmbracoForm.Column = DefaultColumn;
-UmbracoForm.Field = DefaultField;
-UmbracoForm.SubmitButton = DefaultSubmitButton;
+UmbracoForm.Input = defaultComponents.Input;
+UmbracoForm.Page = defaultComponents.Page;
+UmbracoForm.Fieldset = defaultComponents.Fieldset;
+UmbracoForm.Column = defaultComponents.Column;
+UmbracoForm.Field = defaultComponents.Field;
+UmbracoForm.SubmitButton = defaultComponents.SubmitButton;
 
 export { umbracoFormToZod, coerceFormData };
 export type * from "./types";

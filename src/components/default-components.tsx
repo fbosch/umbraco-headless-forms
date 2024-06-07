@@ -2,7 +2,7 @@ import React, { Fragment } from "react";
 import { shouldShowIndicator } from "./predicates";
 import { match } from "ts-pattern";
 import { useUmbracoFormContext } from "./UmbracoForm";
-import { getAttributesForFieldType, getFieldByZodIssue } from "./utils";
+import { getAttributesForFieldType, getFieldByZodIssue } from "./field-utils";
 import { getIssueId } from "./umbraco-form-to-zod";
 import type { ZodIssue } from "zod";
 import type {
@@ -27,7 +27,7 @@ type FormProps = {
   form: FormDto;
 } & React.FormHTMLAttributes<HTMLFormElement>;
 
-export function DefaultForm({ form, ...rest }: FormProps) {
+export function Form({ form, ...rest }: FormProps) {
   return (
     <form
       method="post"
@@ -46,7 +46,7 @@ type PageProps = RenderProps & {
   condition: boolean;
 } & React.HTMLAttributes<HTMLElement>;
 
-export function DefaultPage({
+export function Page({
   page,
   pageIndex,
   children,
@@ -74,11 +74,7 @@ export type FieldsetProps = RenderProps & {
   condition: boolean;
 };
 
-export function DefaultFieldset({
-  fieldset,
-  children,
-  condition,
-}: FieldsetProps) {
+export function Fieldset({ fieldset, children, condition }: FieldsetProps) {
   if (!condition) return null;
   return (
     <Fragment>
@@ -92,7 +88,7 @@ export type ColumnProps = RenderProps & {
   column: FormFieldsetColumnDto;
 };
 
-export function DefaultColumn({ column, children }: ColumnProps) {
+export function Column({ column, children }: ColumnProps) {
   return (
     <Fragment>
       {column.caption ? <h4>{column.caption}</h4> : null}
@@ -107,12 +103,7 @@ export type FieldProps = RenderProps & {
   issues?: ZodIssue[];
 };
 
-export function DefaultField({
-  field,
-  children,
-  condition,
-  issues,
-}: FieldProps) {
+export function Field({ field, children, condition, issues }: FieldProps) {
   const context = useUmbracoFormContext();
   if (!condition) return null;
   const hasIssues = issues && issues.length > 0;
@@ -158,7 +149,7 @@ export function DefaultField({
 
 export type InputProps = Omit<FieldProps, "children" | "condition">;
 
-export function DefaultInput({ field, issues, ...rest }: InputProps) {
+export function Input({ field, issues, ...rest }: InputProps) {
   const context = useUmbracoFormContext();
   const fieldAttributes = getAttributesForFieldType(field, issues, context);
 
@@ -211,9 +202,7 @@ export function DefaultInput({ field, issues, ...rest }: InputProps) {
     .exhaustive();
 }
 
-export function DefaultSubmitButton(
-  props: React.HTMLAttributes<HTMLButtonElement>,
-) {
+export function SubmitButton(props: React.HTMLAttributes<HTMLButtonElement>) {
   const { form, totalPages, currentPage } = useUmbracoFormContext();
   if (totalPages > 1 && currentPage !== totalPages - 1) {
     return null;
@@ -225,9 +214,7 @@ export function DefaultSubmitButton(
   );
 }
 
-export function DefaultNextButton(
-  props: React.HTMLAttributes<HTMLButtonElement>,
-) {
+export function NextButton(props: React.HTMLAttributes<HTMLButtonElement>) {
   const { form, totalPages, currentPage } = useUmbracoFormContext();
   if (currentPage === totalPages - 1) {
     return null;
@@ -239,9 +226,7 @@ export function DefaultNextButton(
   );
 }
 
-export function DefaultPreviousButton(
-  props: React.HTMLAttributes<HTMLButtonElement>,
-) {
+export function PreviousButton(props: React.HTMLAttributes<HTMLButtonElement>) {
   const { form, currentPage } = useUmbracoFormContext();
   if (currentPage === 0) {
     return null;
@@ -258,7 +243,7 @@ export type ValidationSummaryProps = {
   issues: ZodIssue[] | undefined;
 };
 
-export function DefaultValidationSummary(props: ValidationSummaryProps) {
+export function ValidationSummary(props: ValidationSummaryProps) {
   const { form, issues } = props;
   const hasIssues = issues && issues.length > 0;
   if (!hasIssues) return null;

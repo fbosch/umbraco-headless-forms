@@ -12,10 +12,6 @@ import type {
 import { z } from "zod";
 import { getIssueId } from "./umbraco-form-to-zod";
 
-export function exhaustiveCheck(value: never): never {
-  throw new Error("Exhaustive check failed for value: " + value);
-}
-
 const cachedForms = new WeakSet<FormDto>();
 const cachedFieldsById = new WeakMap<FormDto, Map<string, FormFieldDto>>();
 const cachedFieldsByAlias = new WeakMap<FormDto, Map<string, FormFieldDto>>();

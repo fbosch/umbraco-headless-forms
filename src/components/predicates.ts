@@ -5,8 +5,12 @@ import type {
   DtoWithCondition,
   MapFormFieldToZod,
 } from "./types";
-import { getFieldById, exhaustiveCheck } from "./utils";
+import { getFieldById } from "./field-utils";
 import { mapFieldToZod, coerceRuleValue } from "./umbraco-form-to-zod";
+
+export function exhaustiveCheck(value: never): never {
+  throw new Error("Exhaustive check failed for value: " + value);
+}
 
 export function shouldShowIndicator(field: FormFieldDto, form: FormDto) {
   if (form.fieldIndicationType === "NoIndicator") {
