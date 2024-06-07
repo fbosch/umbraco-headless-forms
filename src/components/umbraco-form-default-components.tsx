@@ -1,22 +1,33 @@
 import React, { Fragment } from "react";
 import { shouldShowIndicator } from "./predicates";
 import { match } from "ts-pattern";
-import type {
-  FormProps,
-  PageProps,
-  FieldsetProps,
-  FieldProps,
-  InputProps,
-  ColumnProps,
-  DefaultFormFieldTypeName,
-  UmbracoFormFieldSettingsMap,
-  ValidationSummaryProps,
-} from "./types";
 import { useUmbracoFormContext } from "./UmbracoForm";
 import { getAttributesForFieldType, getFieldByZodIssue } from "./utils";
 import { getIssueId } from "./umbraco-form-to-zod";
+import type { ZodIssue } from "zod";
+import type {
+  FormDto,
+  FormPageDto,
+  FormFieldsetDto,
+  FormFieldsetColumnDto,
+  FormFieldDto,
+  DefaultFormFieldTypeName,
+  UmbracoFormFieldSettingsMap,
+} from "./types";
 
-export function DefaultForm({ form, ...rest }: FormProps): React.ReactNode {
+type RenderProps = React.HTMLAttributes<HTMLElement> &
+  (
+    | { page: FormPageDto; condition: boolean }
+    | { fieldset: FormFieldsetDto; condition: boolean }
+    | { column: FormFieldsetColumnDto }
+    | { field: FormFieldDto; condition: boolean }
+  );
+
+type FormProps = {
+  form: FormDto;
+} & React.FormHTMLAttributes<HTMLFormElement>;
+
+export function DefaultForm({ form, ...rest }: FormProps) {
   return (
     <form
       method="post"
@@ -29,13 +40,19 @@ export function DefaultForm({ form, ...rest }: FormProps): React.ReactNode {
   );
 }
 
+type PageProps = RenderProps & {
+  page: FormPageDto;
+  pageIndex: number;
+  condition: boolean;
+} & React.HTMLAttributes<HTMLElement>;
+
 export function DefaultPage({
   page,
   pageIndex,
   children,
   condition,
   ...rest
-}: PageProps): React.ReactNode {
+}: PageProps) {
   const { currentPage } = useUmbracoFormContext();
   if (!condition) return null;
   const pageIsActive = currentPage === pageIndex;
@@ -52,11 +69,16 @@ export function DefaultPage({
   );
 }
 
+export type FieldsetProps = RenderProps & {
+  fieldset: FormFieldsetDto;
+  condition: boolean;
+};
+
 export function DefaultFieldset({
   fieldset,
   children,
   condition,
-}: FieldsetProps): React.ReactNode {
+}: FieldsetProps) {
   if (!condition) return null;
   return (
     <Fragment>
@@ -66,10 +88,11 @@ export function DefaultFieldset({
   );
 }
 
-export function DefaultColumn({
-  column,
-  children,
-}: ColumnProps): React.ReactNode {
+export type ColumnProps = RenderProps & {
+  column: FormFieldsetColumnDto;
+};
+
+export function DefaultColumn({ column, children }: ColumnProps) {
   return (
     <Fragment>
       {column.caption ? <h4>{column.caption}</h4> : null}
@@ -78,12 +101,18 @@ export function DefaultColumn({
   );
 }
 
+export type FieldProps = RenderProps & {
+  field: FormFieldDto;
+  condition: boolean;
+  issues?: ZodIssue[];
+};
+
 export function DefaultField({
   field,
   children,
   condition,
   issues,
-}: FieldProps): React.ReactNode {
+}: FieldProps) {
   const context = useUmbracoFormContext();
   if (!condition) return null;
   const hasIssues = issues && issues.length > 0;
@@ -127,11 +156,9 @@ export function DefaultField({
   );
 }
 
-export function DefaultInput({
-  field,
-  issues,
-  ...rest
-}: InputProps): React.ReactNode {
+export type InputProps = Omit<FieldProps, "children" | "condition">;
+
+export function DefaultInput({ field, issues, ...rest }: InputProps) {
   const context = useUmbracoFormContext();
   const fieldAttributes = getAttributesForFieldType(field, issues, context);
 
@@ -186,7 +213,7 @@ export function DefaultInput({
 
 export function DefaultSubmitButton(
   props: React.HTMLAttributes<HTMLButtonElement>,
-): React.ReactNode {
+) {
   const { form, totalPages, currentPage } = useUmbracoFormContext();
   if (totalPages > 1 && currentPage !== totalPages - 1) {
     return null;
@@ -200,7 +227,7 @@ export function DefaultSubmitButton(
 
 export function DefaultNextButton(
   props: React.HTMLAttributes<HTMLButtonElement>,
-): React.ReactNode {
+) {
   const { form, totalPages, currentPage } = useUmbracoFormContext();
   if (currentPage === totalPages - 1) {
     return null;
@@ -214,7 +241,7 @@ export function DefaultNextButton(
 
 export function DefaultPreviousButton(
   props: React.HTMLAttributes<HTMLButtonElement>,
-): React.ReactNode {
+) {
   const { form, currentPage } = useUmbracoFormContext();
   if (currentPage === 0) {
     return null;
@@ -225,6 +252,11 @@ export function DefaultPreviousButton(
     </button>
   );
 }
+
+export type ValidationSummaryProps = {
+  form: FormDto;
+  issues: ZodIssue[] | undefined;
+};
 
 export function DefaultValidationSummary(props: ValidationSummaryProps) {
   const { form, issues } = props;

@@ -10,15 +10,8 @@ import React, {
 import type {
   UmbracoFormContext,
   UmbracoFormConfig,
-  FormDto,
-  FormProps,
-  PageProps,
-  ColumnProps,
-  InputProps,
-  FieldsetProps,
-  FieldProps,
-  ValidationSummaryProps,
   DtoWithCondition,
+  FormDto,
 } from "./types";
 import {
   getAllFieldsOnPage,
@@ -30,7 +23,7 @@ import {
   sortZodIssuesByFieldAlias,
   umbracoFormToZod,
 } from "./umbraco-form-to-zod";
-import { ZodIssue } from "zod";
+import type { ZodIssue } from "zod";
 import { isConditionFulfilled } from "./predicates";
 import {
   DefaultForm,
@@ -45,27 +38,24 @@ import {
   DefaultValidationSummary,
 } from "./umbraco-form-default-components";
 
+type RenderFn<T extends React.JSXElementConstructor<any>> = (
+  props: React.ComponentProps<T>,
+) => React.ReactNode;
+
 export interface UmbracoFormProps
   extends React.FormHTMLAttributes<HTMLFormElement> {
-  requestToken?: string;
   form: FormDto;
   config?: Partial<UmbracoFormConfig>;
-  renderForm?: (props: FormProps) => React.ReactNode;
-  renderPage?: (props: PageProps) => React.ReactNode;
-  renderFieldset?: (props: FieldsetProps) => React.ReactNode;
-  renderColumn?: (props: ColumnProps) => React.ReactNode;
-  renderField?: (props: FieldProps) => React.ReactNode;
-  renderInput?: (props: InputProps) => React.ReactNode | undefined;
-  renderValidationSummary?: (props: ValidationSummaryProps) => React.ReactNode;
-  renderSubmitButton?: (
-    props: React.HTMLAttributes<HTMLButtonElement>,
-  ) => React.ReactNode;
-  renderNextButton?: (
-    props: React.HTMLAttributes<HTMLButtonElement>,
-  ) => React.ReactNode;
-  renderPreviousButton?: (
-    props: React.HTMLAttributes<HTMLButtonElement>,
-  ) => React.ReactNode;
+  renderForm?: RenderFn<typeof DefaultForm>;
+  renderPage?: RenderFn<typeof DefaultPage>;
+  renderFieldset?: RenderFn<typeof DefaultFieldset>;
+  renderColumn?: RenderFn<typeof DefaultColumn>;
+  renderField?: RenderFn<typeof DefaultField>;
+  renderInput?: RenderFn<typeof DefaultInput>;
+  renderValidationSummary?: RenderFn<typeof DefaultValidationSummary>;
+  renderSubmitButton?: RenderFn<typeof DefaultSubmitButton>;
+  renderNextButton?: RenderFn<typeof DefaultNextButton>;
+  renderPreviousButton?: RenderFn<typeof DefaultPreviousButton>;
 }
 
 const UmbracoFormContext = createContext<UmbracoFormContext>(
@@ -234,7 +224,7 @@ function UmbracoForm(props: UmbracoFormProps) {
         onBlur(e);
       }
     },
-    [validateFormData, form, isCurrentPageValid],
+    [validateFormData, form, isCurrentPageValid, config.shouldValidate],
   );
 
   const scrollToTopOfForm = useCallback(() => {
