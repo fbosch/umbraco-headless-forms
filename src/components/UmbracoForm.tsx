@@ -18,13 +18,13 @@ import {
   filterFieldsByConditions,
   getFieldByZodIssue,
 } from "./field-utils";
+import type { ZodIssue } from "zod";
 import {
   coerceFormData,
   sortZodIssuesByFieldAlias,
   umbracoFormToZod,
 } from "./umbraco-form-to-zod";
 import * as defaultComponents from "./default-components";
-import type { ZodIssue } from "zod";
 import { isConditionFulfilled } from "./predicates";
 
 type RenderFn<T extends React.JSXElementConstructor<any>> = (
@@ -244,18 +244,20 @@ function UmbracoForm(props: UmbracoFormProps) {
   const handleNextPage = useCallback(
     (e: React.MouseEvent<HTMLButtonElement>) => {
       e.preventDefault();
-      startValidationTransition(() => {
-        if (config.shouldValidate) {
+      if (config.shouldValidate) {
+        startValidationTransition(() => {
           if (isCurrentPageValid() === false) {
             scrollToTopOfForm();
             focusFirstInvalidField();
             setSubmitAttempts((prev) => prev + 1);
             return;
           }
-        }
+          setCurrentPage((prev) => prev + 1);
+          setSubmitAttempts(0);
+        });
+      } else {
         setCurrentPage((prev) => prev + 1);
-        setSubmitAttempts(0);
-      });
+      }
     },
     [
       isCurrentPageValid,
