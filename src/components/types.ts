@@ -45,7 +45,7 @@ export interface FormFieldTypeDto
 export interface FormFieldDto
   extends Omit<components["schemas"]["FormFieldDto"], "type" | "settings"> {
   type: FormFieldTypeDto;
-  settings?: UmbracoFormFieldSettingsMap[DefaultFormFieldTypeName];
+  settings: UmbracoFormFieldSettingsMap[DefaultFormFieldTypeName];
 }
 
 export type FormConditionDto = components["schemas"]["FormConditionDto"];

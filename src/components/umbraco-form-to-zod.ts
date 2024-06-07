@@ -37,7 +37,7 @@ export function umbracoFormToZod(
 
 /** map umbraco form fields to zod type */
 export function mapFieldToZod(
-  field: FormFieldDto | undefined,
+  field: FormFieldDto,
   mapCustomFieldToZodType?: MapFormFieldToZod,
 ): z.ZodTypeAny {
   let zodType;
@@ -55,6 +55,9 @@ export function mapFieldToZod(
       });
       if (field?.required) {
         zodType = zodType.min(1);
+      }
+      if ("maximumLength" in field?.settings) {
+        zodType = zodType.max(parseInt(field?.settings.maximumLength));
       }
       if (field?.pattern) {
         const regex = new RegExp(field.pattern);

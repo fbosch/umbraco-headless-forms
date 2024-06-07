@@ -31,7 +31,7 @@ export default {
                   pattern: "",
                   patternInvalidErrorMessage:
                     "Please provide a valid value for Name",
-                  placeholder: "",
+                  placeholder: "email@example.com",
                   preValues: [],
                   required: true,
                   requiredErrorMessage: "Please provide a value for Name",

@@ -83,28 +83,11 @@ export function getAttributesForFieldType(
       validate && hasIssues ? issues.at(0)?.message : undefined,
   };
 
-  console.log(field.alias, field.required);
+  const defaultValue =
+    "defaultValue" in field.settings ? field.settings.defaultValue : undefined;
 
-  const defaultValue = match(field?.type?.name)
-    .with(
-      "Short answer",
-      "Long answer",
-      "Checkbox",
-      "Multiple choice",
-      "Dropdown",
-      (typeName) => {
-        const settings =
-          field?.settings as UmbracoFormFieldSettingsMap[typeof typeName];
-
-        return settings?.defaultValue || undefined;
-      },
-    )
-    .otherwise(() => undefined);
-
-  const textAttributes = match(field?.type?.name).with(
-    "Short answer",
-    "Long answer",
-    (typeName) => {
+  const textAttributes = match(field?.type?.name)
+    .with("Short answer", "Long answer", (typeName) => {
       const settings =
         field?.settings as UmbracoFormFieldSettingsMap[typeof typeName];
       return {
@@ -116,8 +99,8 @@ export function getAttributesForFieldType(
             ? parseInt(settings?.maximumLength)
             : undefined,
       };
-    },
-  );
+    })
+    .otherwise(() => {});
 
   return match(field?.type?.name)
     .with("Short answer", (typeName) => {
