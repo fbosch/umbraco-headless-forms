@@ -32,5 +32,21 @@
   label {
     @apply block text-sm font-medium text-gray-700;
   }
+
+  section[role="alert"] {
+    @apply mt-4 border border-red-600 rounded-md p-4 mb-7 bg-red-50 max-w-lg;
+    ol {
+      @apply list-inside space-y-1;
+      li {
+        @apply text-sm text-red-700;
+        &:before {
+          @apply text-gray-500;
+          content: "❗️";
+          margin-right: 0.5rem;
+        }
+      }
+    }
+  }
 }
+
 

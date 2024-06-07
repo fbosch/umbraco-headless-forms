@@ -1,5 +1,9 @@
 import { z } from "zod";
-import { exhaustiveCheck, filterFieldsByConditions } from "./utils";
+import {
+  exhaustiveCheck,
+  filterFieldsByConditions,
+  getAllFields,
+} from "./utils";
 import type {
   FormFieldDto,
   FormDto,
@@ -54,10 +58,13 @@ export function mapFieldToZod(
         coerce: true,
       });
       if (field?.required) {
-        zodType = zodType.min(1);
+        zodType = zodType.min(1, field?.requiredErrorMessage);
       }
       if ("maximumLength" in field?.settings) {
-        zodType = zodType.max(parseInt(field?.settings.maximumLength));
+        zodType = zodType.max(
+          parseInt(field?.settings.maximumLength),
+          field?.patternInvalidErrorMessage,
+        );
       }
       if (field?.pattern) {
         const regex = new RegExp(field.pattern);
@@ -100,6 +107,29 @@ export function mapFieldToZod(
   }
 
   return zodType;
+}
+
+export function getIssueId(
+  field: FormFieldDto | undefined,
+  issue: z.ZodIssue | undefined,
+) {
+  return "issue:" + issue?.code + ":" + field?.id;
+}
+
+export function sortZodIssuesByFieldAlias(form: FormDto, issues: z.ZodIssue[]) {
+  const allFields = getAllFields(form);
+  const fieldPaths = allFields?.map((field) => field?.alias);
+
+  return issues?.sort((a, b) => {
+    if (!a || !b) return 0;
+    const aPath = fieldPaths?.indexOf(a?.path.join("."));
+    const bPath = fieldPaths?.indexOf(b?.path.join("."));
+    if (aPath === undefined || bPath === undefined) return 0;
+    if (aPath === bPath) {
+      return a.path.join(".").localeCompare(b.path.join("."));
+    }
+    return aPath - bPath;
+  });
 }
 
 /** omit fields from data that are not visible to the user */

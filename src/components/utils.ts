@@ -8,8 +8,10 @@ import type {
   DtoWithCondition,
   UmbracoFormFieldSettingsMap,
   MapFormFieldToZod,
+  UmbracoFormContext,
 } from "./types";
 import { z } from "zod";
+import { getIssueId } from "./umbraco-form-to-zod";
 
 export function exhaustiveCheck(value: never): never {
   throw new Error("Exhaustive check failed for value: " + value);
@@ -24,7 +26,6 @@ export function getAllFields(form: FormDto) {
   );
 }
 
-/** get a field by id */
 export function getFieldById(form: FormDto, id?: string) {
   return getAllFields(form)?.find((field) => field?.id === id);
 }
@@ -68,19 +69,33 @@ type CommonAttributes = React.InputHTMLAttributes<HTMLInputElement> &
 export function getAttributesForFieldType(
   field: FormFieldDto,
   issues: z.ZodIssue[] | undefined,
-  config: UmbracoFormConfig,
+  context: UmbracoFormContext,
 ) {
-  const { shouldValidate, shouldUseNativeValidation } = config;
+  const { hideFieldValidation, showValidationSummary } = context.form;
+  const { shouldValidate, shouldUseNativeValidation } = context.config;
   const hasIssues = issues && issues?.length > 0;
-  const validate = shouldValidate && shouldUseNativeValidation;
+
+  console.log(context);
 
   const commonAttributes: CommonAttributes = {
     name: field.alias,
     id: field.id,
-    required: validate && field.required ? field.required : undefined,
-    ["aria-invalid"]: validate ? hasIssues : undefined,
+    required:
+      shouldValidate && shouldUseNativeValidation && field.required
+        ? field.required
+        : undefined,
+    ["aria-invalid"]: shouldValidate ? hasIssues : undefined,
     ["aria-errormessage"]:
-      validate && hasIssues ? issues.at(0)?.message : undefined,
+      shouldValidate && hasIssues && hideFieldValidation === false
+        ? issues.at(0)?.message
+        : undefined,
+    ["aria-describedby"]:
+      shouldValidate &&
+      hasIssues &&
+      hideFieldValidation === true &&
+      showValidationSummary
+        ? getIssueId(field, issues.at(0))
+        : undefined,
   };
 
   const defaultValue =
@@ -93,9 +108,12 @@ export function getAttributesForFieldType(
       return {
         autoComplete: settings?.autocompleteAttribute || undefined,
         placeholder: field.placeholder || undefined,
-        pattern: validate && field.pattern ? field.pattern : undefined,
+        pattern:
+          shouldValidate && shouldUseNativeValidation && field.pattern
+            ? field.pattern
+            : undefined,
         maxLength:
-          validate && settings?.maximumLength
+          shouldValidate && shouldUseNativeValidation && settings?.maximumLength
             ? parseInt(settings?.maximumLength)
             : undefined,
       };

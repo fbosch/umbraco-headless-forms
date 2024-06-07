@@ -15,10 +15,15 @@ import type {
   InputProps,
   FieldsetProps,
   FieldProps,
+  ValidationSummaryProps,
   DtoWithCondition,
 } from "./types";
 import { getAllFieldsOnPage, filterFieldsByConditions } from "./utils";
-import { coerceFormData, umbracoFormToZod } from "./umbraco-form-to-zod";
+import {
+  coerceFormData,
+  sortZodIssuesByFieldAlias,
+  umbracoFormToZod,
+} from "./umbraco-form-to-zod";
 import { ZodIssue } from "zod";
 import { isConditionFulfilled } from "./predicates";
 import {
@@ -31,6 +36,7 @@ import {
   DefaultSubmitButton,
   DefaultNextButton,
   DefaultPreviousButton,
+  DefaultValidationSummary,
 } from "./umbraco-form-default-components";
 
 export interface UmbracoFormProps
@@ -44,6 +50,7 @@ export interface UmbracoFormProps
   renderColumn?: (props: ColumnProps) => React.ReactNode;
   renderField?: (props: FieldProps) => React.ReactNode;
   renderInput?: (props: InputProps) => React.ReactNode | undefined;
+  renderValidationSummary?: (props: ValidationSummaryProps) => React.ReactNode;
   renderSubmitButton?: (
     props: React.HTMLAttributes<HTMLButtonElement>,
   ) => React.ReactNode;
@@ -74,6 +81,7 @@ function UmbracoForm(props: UmbracoFormProps) {
     renderSubmitButton: SubmitButton = DefaultSubmitButton,
     renderNextButton: NextButton = DefaultNextButton,
     renderPreviousButton: PreviousButton = DefaultPreviousButton,
+    renderValidationSummary: ValidationSummary = DefaultValidationSummary,
     children,
     onChange,
     onSubmit,
@@ -110,20 +118,21 @@ function UmbracoForm(props: UmbracoFormProps) {
       if (parsedForm?.success) {
         setFormIssues([]);
       } else if (parsedForm?.error?.issues) {
-        setFormIssues((prev) => [
-          ...prev.filter((issue) => {
-            if (fieldName) {
-              return issue.path.join(".") !== fieldName;
-            }
-            return true;
-          }),
-          ...parsedForm.error.issues.filter((issue) => {
-            if (fieldName) {
-              return issue.path.join(".") === fieldName;
-            }
-            return true;
-          }),
-        ]);
+        setFormIssues((prev) =>
+          sortZodIssuesByFieldAlias(
+            form,
+            fieldName
+              ? [
+                  ...prev.filter((issue) => {
+                    return issue.path.join(".") !== fieldName;
+                  }),
+                  ...parsedForm.error.issues.filter((issue) => {
+                    return issue.path.join(".") === fieldName;
+                  }),
+                ]
+              : parsedForm.error.issues,
+          ),
+        );
       }
       return parsedForm;
     },
@@ -275,6 +284,9 @@ function UmbracoForm(props: UmbracoFormProps) {
         currentPage,
       }}
     >
+      {form.showValidationSummary && submitAttempts > 0 ? (
+        <ValidationSummary form={form} issues={formIssues} />
+      ) : null}
       <Form
         form={form}
         {...rest}

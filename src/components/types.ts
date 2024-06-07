@@ -169,3 +169,8 @@ export type FieldProps = RenderProps & {
 };
 
 export type InputProps = Omit<FieldProps, "children" | "condition">;
+
+export type ValidationSummaryProps = {
+  form: FormDto;
+  issues: z.ZodIssue[] | undefined;
+};

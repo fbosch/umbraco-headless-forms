@@ -1,7 +1,7 @@
 export default {
   disableDefaultStylesheet: false,
   fieldIndicationType: "MarkMandatoryFields",
-  hideFieldValidation: false,
+  hideFieldValidation: true,
   id: "34ef4a19-efa7-40c1-b8b6-2fd7257f2ed3",
   indicator: "*",
   messageOnSubmit: "Thanks for submitting the form",
@@ -31,7 +31,7 @@ export default {
                   pattern: "",
                   patternInvalidErrorMessage:
                     "Please provide a valid value for Name",
-                  placeholder: "email@example.com",
+                  placeholder: "John Doe",
                   preValues: [],
                   required: true,
                   requiredErrorMessage: "Please provide a value for Name",
@@ -62,7 +62,7 @@ export default {
                     "^[_a-z0-9-]+(\\.[_a-z0-9-]+)*@[a-z0-9-]+(\\.[a-z0-9-]+)*(\\.[a-z]{2,4})$",
                   patternInvalidErrorMessage:
                     "Please provide a valid value for Email",
-                  placeholder: "",
+                  placeholder: "email@example.com",
                   preValues: [],
                   required: true,
                   requiredErrorMessage: "Please provide a value for Email",
@@ -92,7 +92,7 @@ export default {
                   pattern: "",
                   patternInvalidErrorMessage:
                     "Please provide a valid value for Comment",
-                  placeholder: "",
+                  placeholder: "Share your thoughts...",
                   preValues: [],
                   required: false,
                   requiredErrorMessage: "Please provide a value for Comment",
@@ -293,6 +293,6 @@ export default {
     },
   ],
   previousLabel: "Previous",
-  showValidationSummary: false,
+  showValidationSummary: true,
   submitLabel: "Submit",
 };

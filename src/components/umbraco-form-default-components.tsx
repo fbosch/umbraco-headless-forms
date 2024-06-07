@@ -10,9 +10,11 @@ import type {
   ColumnProps,
   DefaultFormFieldTypeName,
   UmbracoFormFieldSettingsMap,
+  ValidationSummaryProps,
 } from "./types";
 import { useUmbracoFormContext } from "./UmbracoForm";
-import { getAttributesForFieldType } from "./utils";
+import { getAttributesForFieldType, getFieldByAlias } from "./utils";
+import { getIssueId } from "./umbraco-form-to-zod";
 
 export function DefaultForm({ form, ...rest }: FormProps): React.ReactNode {
   return (
@@ -127,11 +129,7 @@ export function DefaultInput({
   ...rest
 }: InputProps): React.ReactNode {
   const context = useUmbracoFormContext();
-  const fieldAttributes = getAttributesForFieldType(
-    field,
-    issues,
-    context.config,
-  );
+  const fieldAttributes = getAttributesForFieldType(field, issues, context);
 
   const attributes = {
     ...fieldAttributes,
@@ -221,5 +219,28 @@ export function DefaultPreviousButton(
     <button type="button" {...props}>
       {form.previousLabel}
     </button>
+  );
+}
+
+export function DefaultValidationSummary(props: ValidationSummaryProps) {
+  const { form, issues } = props;
+  const hasIssues = issues && issues.length > 0;
+  if (!hasIssues) return null;
+
+  return (
+    <section role="alert">
+      <ol>
+        {issues?.map((issue) => {
+          const alias = issue.path.join(".");
+          const field = getFieldByAlias(form, alias);
+          const id = getIssueId(field, issue);
+          return (
+            <li key={id} id={id}>
+              {field?.caption}: {issue.message}
+            </li>
+          );
+        })}
+      </ol>
+    </section>
   );
 }
