@@ -150,7 +150,7 @@ export type PageProps = RenderProps & {
   page: FormPageDto;
   pageIndex: number;
   condition: boolean;
-};
+} & React.HTMLAttributes<HTMLElement>;
 
 export type FieldsetProps = RenderProps & {
   fieldset: FormFieldsetDto;

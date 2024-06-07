@@ -55,10 +55,18 @@ export function areAllRulesFulfilled(
   if (!rules || rules.length === 0) return true;
 
   const appliedRules = rules.map((rule): boolean => {
+    if (rule?.field === undefined) {
+      throw new TypeError("Rule field is undefined");
+    }
     const operator = rule?.operator as FieldConditionRuleOperator;
     const targetField = getFieldById(form, rule.field);
+    if (targetField === undefined || targetField.alias === undefined) {
+      throw new Error(
+        `Rule target for field id: "${rule.field}", could not be found in the form definition`,
+      );
+    }
     const fieldZodType = mapFieldToZod(targetField, mapCustomFieldToZodType);
-    const fieldValue = data[targetField?.alias as string];
+    const fieldValue = data[targetField.alias];
     const ruleValue = coerceRuleValue(fieldZodType, rule.value);
 
     switch (operator) {

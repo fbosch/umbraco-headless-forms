@@ -13,15 +13,15 @@
 
   input {
     &[aria-invalid="true"] {
-      @apply border-red-500;
+      @apply border-red-600;
     }
   }
 
-  [id^="error:"] {
-    @apply text-red-500 text-sm mt-1;
+  [id^="issue:"] {
+    @apply text-red-600 text-sm mt-1;
     &:before {
-      content: "⚠️";
-      @apply text-red-500 text-sm pr-2;
+      content: "❗️";
+      @apply text-red-600 text-sm pr-1;
     }
   }
   
@@ -40,9 +40,8 @@
       li {
         @apply text-sm text-red-700;
         &:before {
-          @apply text-gray-500;
+          @apply text-gray-500 pr-1;
           content: "❗️";
-          margin-right: 0.5rem;
         }
       }
     }

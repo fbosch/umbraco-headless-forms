@@ -1,7 +1,7 @@
 export default {
   disableDefaultStylesheet: false,
   fieldIndicationType: "MarkMandatoryFields",
-  hideFieldValidation: true,
+  hideFieldValidation: false,
   id: "34ef4a19-efa7-40c1-b8b6-2fd7257f2ed3",
   indicator: "*",
   messageOnSubmit: "Thanks for submitting the form",

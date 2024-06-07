@@ -20,7 +20,11 @@ import type {
   ValidationSummaryProps,
   DtoWithCondition,
 } from "./types";
-import { getAllFieldsOnPage, filterFieldsByConditions } from "./utils";
+import {
+  getAllFieldsOnPage,
+  filterFieldsByConditions,
+  getFieldByZodIssue,
+} from "./utils";
 import {
   coerceFormData,
   sortZodIssuesByFieldAlias,
@@ -102,6 +106,7 @@ function UmbracoForm(props: UmbracoFormProps) {
   const [submitAttempts, setSubmitAttempts] = useState<number>(0);
   const internalDataRef = useRef<Record<string, unknown>>({});
   const [formIssues, setFormIssues] = useState<ZodIssue[]>([]);
+  const [summaryIssues, setSummaryIssues] = useState<ZodIssue[]>([]);
   const [currentPage, setCurrentPage] = useState(0);
 
   const checkCondition = (dto: DtoWithCondition) =>
@@ -125,12 +130,10 @@ function UmbracoForm(props: UmbracoFormProps) {
             form,
             fieldName
               ? [
-                  ...prev.filter((issue) => {
-                    return issue.path.join(".") !== fieldName;
-                  }),
-                  ...parsedForm.error.issues.filter((issue) => {
-                    return issue.path.join(".") === fieldName;
-                  }),
+                  ...prev.filter((issue) => issue.path.join(".") !== fieldName),
+                  ...parsedForm.error.issues.filter(
+                    (issue) => issue.path.join(".") === fieldName,
+                  ),
                 ]
               : parsedForm.error.issues,
           ),
@@ -164,56 +167,84 @@ function UmbracoForm(props: UmbracoFormProps) {
 
   const handleOnBlur = useCallback(
     (e: React.FocusEvent<HTMLFormElement, HTMLElement>) => {
-      startValidationTransition(() => {
-        const field = e.target;
-        const formData = new FormData(e.currentTarget as HTMLFormElement);
-        const coercedData = coerceFormData(formData, config.schema);
-        internalDataRef.current = coercedData;
+      const field = e.target;
+      const formData = new FormData(e.currentTarget as HTMLFormElement);
+      const coercedData = coerceFormData(formData, config.schema);
+      internalDataRef.current = coercedData;
 
-        if (config?.shouldValidate) {
+      if (config?.shouldValidate) {
+        startValidationTransition(() => {
           validateFormData(coercedData, field.name);
-        }
+        });
+      }
 
-        if (typeof onBlur === "function") {
-          onBlur(e);
-        }
-      });
+      if (typeof onBlur === "function") {
+        onBlur(e);
+      }
     },
     [],
   );
 
   const isCurrentPageValid = useCallback(() => {
-    const activePageDefinition = form?.pages?.[currentPage];
+    const activePage = form?.pages?.[currentPage];
     if (config.shouldValidate === false) {
       return true;
     }
-    const fieldAliasesWithIssues = validateFormData(
-      internalDataRef.current,
-    ).error?.issues?.flatMap((issue) => issue.path.join("."));
 
+    // dont validate fields that are not visible to the user
     const fieldsWithConditionsMet = filterFieldsByConditions(
       form,
       internalDataRef.current,
       config.mapCustomFieldToZodType,
     ).map((field) => field.alias);
 
+    // get all fields with issues and filter out fields with conditions that are not met
+    const allFieldIssues = validateFormData(
+      internalDataRef.current,
+    ).error?.issues?.filter((issue) =>
+      fieldsWithConditionsMet.includes(getFieldByZodIssue(form, issue)?.alias),
+    );
+
+    // get all aliases for fields with issues
+    const fieldAliasesWithIssues = allFieldIssues?.map(
+      (issue) => getFieldByZodIssue(form, issue)?.alias,
+    );
+
     // get all fields on the current page and filter out fields with conditions that are not met
     // so that they wont block the user from going to the next page
-    const fieldsOnPage = getAllFieldsOnPage(activePageDefinition)
-      .map((field) => field?.alias)
-      .filter((field) => fieldsWithConditionsMet.includes(field));
+    const fieldsOnPage = getAllFieldsOnPage(activePage)?.filter((field) =>
+      fieldsWithConditionsMet.includes(field?.alias),
+    );
+
+    const aliasesOnPage = fieldsOnPage?.map((field) => field?.alias) ?? [];
+
+    const pageIssues =
+      allFieldIssues?.filter((issue) =>
+        aliasesOnPage?.includes(getFieldByZodIssue(form, issue)?.alias),
+      ) ?? [];
 
     if (
-      fieldsOnPage.some(
-        (field) => field && fieldAliasesWithIssues?.includes(field),
+      fieldsOnPage?.some(
+        (field) => field && fieldAliasesWithIssues?.includes(field.alias),
       )
     ) {
       // prevent user from going to next page if there are fields with issues on the current page
 
+      startValidationTransition(() => {
+        setSubmitAttempts((prev) => prev + 1);
+        setSummaryIssues(pageIssues);
+      });
       return false;
     }
     return true;
   }, [config.shouldValidate, form, validateFormData, currentPage]);
+
+  const scrollToTopOfForm = useCallback(() => {
+    const formElement = document.getElementById("[name='" + form.id + "']");
+    if (formElement) {
+      formElement.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  }, [form]);
 
   const focusFirstInvalidField = useCallback(() => {
     const fieldWithIssues = formIssues?.find((issue) => issue.path.length > 0);
@@ -233,39 +264,61 @@ function UmbracoForm(props: UmbracoFormProps) {
   const handleNextPage = useCallback(
     (e: React.MouseEvent<HTMLButtonElement>) => {
       e.preventDefault();
-      if (isCurrentPageValid() === false) {
-        focusFirstInvalidField();
-        return;
-      }
-      setCurrentPage((prev) => prev + 1);
+      startValidationTransition(() => {
+        if (config.shouldValidate) {
+          if (isCurrentPageValid() === false) {
+            scrollToTopOfForm();
+            focusFirstInvalidField();
+            setSubmitAttempts((prev) => prev + 1);
+            return;
+          }
+        }
+        setCurrentPage((prev) => prev + 1);
+        setSubmitAttempts(0);
+      });
     },
-    [isCurrentPageValid],
+    [
+      isCurrentPageValid,
+      focusFirstInvalidField,
+      scrollToTopOfForm,
+      config.shouldValidate,
+    ],
   );
 
   const handlePreviousPage = useCallback(
     (e: React.MouseEvent<HTMLButtonElement>) => {
       e.preventDefault();
       setCurrentPage((prev) => (prev === 0 ? prev : prev - 1));
+      scrollToTopOfForm();
     },
-    [],
+    [scrollToTopOfForm],
   );
 
   const handleOnSubmit = useCallback(
     (e: React.FormEvent<HTMLFormElement>) => {
       setSubmitAttempts((prev) => prev + 1);
       if (config.shouldValidate) {
-        const submitData = coerceFormData(
-          new FormData(e.currentTarget),
-          config.schema,
-        );
-        e.preventDefault();
-        if (validateFormData(submitData).success === false) {
-          focusFirstInvalidField();
-          return;
+        startValidationTransition(() => {
+          const submitData = coerceFormData(
+            new FormData(e.currentTarget),
+            config.schema,
+          );
+          e.preventDefault();
+          const validationResult = validateFormData(submitData);
+          if (validationResult.success === false) {
+            focusFirstInvalidField();
+            setSummaryIssues(validationResult.error.issues);
+            return;
+          }
+          setSummaryIssues([]);
+          if (typeof onSubmit === "function") {
+            onSubmit(e);
+          }
+        });
+      } else {
+        if (typeof onSubmit === "function") {
+          onSubmit(e);
         }
-      }
-      if (typeof onSubmit === "function") {
-        onSubmit(e);
       }
     },
     [focusFirstInvalidField, config.schema, onSubmit],
@@ -282,7 +335,7 @@ function UmbracoForm(props: UmbracoFormProps) {
       }}
     >
       {form.showValidationSummary && submitAttempts > 0 ? (
-        <ValidationSummary form={form} issues={formIssues} />
+        <ValidationSummary form={form} issues={summaryIssues} />
       ) : null}
       <Form
         form={form}

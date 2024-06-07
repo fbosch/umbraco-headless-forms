@@ -3,6 +3,7 @@ import {
   exhaustiveCheck,
   filterFieldsByConditions,
   getAllFields,
+  getFieldByZodIssue,
 } from "./utils";
 import type {
   FormFieldDto,
@@ -122,8 +123,8 @@ export function sortZodIssuesByFieldAlias(form: FormDto, issues: z.ZodIssue[]) {
 
   return issues?.sort((a, b) => {
     if (!a || !b) return 0;
-    const aPath = fieldPaths?.indexOf(a?.path.join("."));
-    const bPath = fieldPaths?.indexOf(b?.path.join("."));
+    const aPath = fieldPaths?.indexOf(getFieldByZodIssue(form, a)?.alias);
+    const bPath = fieldPaths?.indexOf(getFieldByZodIssue(form, b)?.alias);
     if (aPath === undefined || bPath === undefined) return 0;
     if (aPath === bPath) {
       return a.path.join(".").localeCompare(b.path.join("."));

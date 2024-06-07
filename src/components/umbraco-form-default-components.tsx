@@ -13,7 +13,7 @@ import type {
   ValidationSummaryProps,
 } from "./types";
 import { useUmbracoFormContext } from "./UmbracoForm";
-import { getAttributesForFieldType, getFieldByAlias } from "./utils";
+import { getAttributesForFieldType, getFieldByZodIssue } from "./utils";
 import { getIssueId } from "./umbraco-form-to-zod";
 
 export function DefaultForm({ form, ...rest }: FormProps): React.ReactNode {
@@ -23,7 +23,7 @@ export function DefaultForm({ form, ...rest }: FormProps): React.ReactNode {
       action={`/umbraco/forms/api/v1/entries/${form.id}`}
       target="_blank"
       {...rest}
-      id={"form-" + form.id}
+      id={"form:" + form.id}
       name={form.id}
     />
   );
@@ -34,17 +34,21 @@ export function DefaultPage({
   pageIndex,
   children,
   condition,
+  ...rest
 }: PageProps): React.ReactNode {
-  const { totalPages, currentPage } = useUmbracoFormContext();
+  const { currentPage } = useUmbracoFormContext();
   if (!condition) return null;
-  if (totalPages > 1 && currentPage !== pageIndex) {
-    return null;
-  }
+  const pageIsActive = currentPage === pageIndex;
+
   return (
-    <Fragment>
-      {page.caption ? <h2>{page.caption}</h2> : null}
+    <section style={pageIsActive ? {} : { display: "none" }} {...rest}>
+      {page.caption ? (
+        <header>
+          <h2>{page.caption}</h2>
+        </header>
+      ) : null}
       {children}
-    </Fragment>
+    </section>
   );
 }
 
@@ -94,7 +98,7 @@ export function DefaultField({
     <span id={helpTextId}>{field.helpText}</span>
   ) : null;
   const validationErrors = showValidationErrors ? (
-    <span id={"error:" + field.id}>{issues?.at(0)?.message}</span>
+    <span id={getIssueId(field, issues?.at(0))}>{issues?.at(0)?.message}</span>
   ) : null;
 
   if (fieldTypeName === "Multiple choice") {
@@ -231,8 +235,7 @@ export function DefaultValidationSummary(props: ValidationSummaryProps) {
     <section role="alert">
       <ol>
         {issues?.map((issue) => {
-          const alias = issue.path.join(".");
-          const field = getFieldByAlias(form, alias);
+          const field = getFieldByZodIssue(form, issue);
           const id = getIssueId(field, issue);
           return (
             <li key={id} id={id}>
