@@ -128,7 +128,6 @@ export interface UmbracoFormConfig {
 
 export interface UmbracoFormContext {
   form: FormDto;
-  formData: FormData | undefined;
   config: UmbracoFormConfig;
   submitAttempts: number;
   currentPage: number;

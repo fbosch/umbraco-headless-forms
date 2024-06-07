@@ -71,7 +71,7 @@ const UmbracoFormContext = createContext<UmbracoFormContext>(
 export const useUmbracoFormContext = () => useContext(UmbracoFormContext);
 
 function UmbracoForm(props: UmbracoFormProps) {
-  const [validationIsPending, startValidationTransition] = useTransition();
+  const [, startValidationTransition] = useTransition();
   const {
     form,
     config: configOverride = {},
@@ -100,7 +100,6 @@ function UmbracoForm(props: UmbracoFormProps) {
   };
 
   const [submitAttempts, setSubmitAttempts] = useState<number>(0);
-  const [formData, setFormData] = useState<FormData | undefined>(undefined);
   const internalDataRef = useRef<Record<string, unknown>>({});
   const [formIssues, setFormIssues] = useState<ZodIssue[]>([]);
   const [currentPage, setCurrentPage] = useState(0);
@@ -147,7 +146,6 @@ function UmbracoForm(props: UmbracoFormProps) {
       startValidationTransition(() => {
         const formData = new FormData(e.currentTarget);
         const coercedData = coerceFormData(formData, config.schema);
-        setFormData(formData);
         internalDataRef.current = coercedData;
         if (
           config.shouldValidate &&
@@ -170,7 +168,6 @@ function UmbracoForm(props: UmbracoFormProps) {
         const field = e.target;
         const formData = new FormData(e.currentTarget as HTMLFormElement);
         const coercedData = coerceFormData(formData, config.schema);
-        setFormData(formData);
         internalDataRef.current = coercedData;
 
         if (config?.shouldValidate) {
@@ -278,7 +275,6 @@ function UmbracoForm(props: UmbracoFormProps) {
     <UmbracoFormContext.Provider
       value={{
         form,
-        formData,
         config,
         submitAttempts,
         totalPages,
