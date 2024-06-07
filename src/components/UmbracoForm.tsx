@@ -4,6 +4,8 @@ import React, {
   useCallback,
   useState,
   useContext,
+  useTransition,
+  useRef,
 } from "react";
 import type {
   UmbracoFormContext,
@@ -69,6 +71,7 @@ const UmbracoFormContext = createContext<UmbracoFormContext>(
 export const useUmbracoFormContext = () => useContext(UmbracoFormContext);
 
 function UmbracoForm(props: UmbracoFormProps) {
+  const [validationIsPending, startValidationTransition] = useTransition();
   const {
     form,
     config: configOverride = {},
@@ -98,7 +101,7 @@ function UmbracoForm(props: UmbracoFormProps) {
 
   const [submitAttempts, setSubmitAttempts] = useState<number>(0);
   const [formData, setFormData] = useState<FormData | undefined>(undefined);
-  const [internalData, setInternalData] = useState<Record<string, unknown>>({});
+  const internalDataRef = useRef<Record<string, unknown>>({});
   const [formIssues, setFormIssues] = useState<ZodIssue[]>([]);
   const [currentPage, setCurrentPage] = useState(0);
 
@@ -106,7 +109,7 @@ function UmbracoForm(props: UmbracoFormProps) {
     isConditionFulfilled(
       dto,
       form,
-      internalData,
+      internalDataRef.current,
       config?.mapCustomFieldToZodType,
     );
 
@@ -141,39 +144,43 @@ function UmbracoForm(props: UmbracoFormProps) {
 
   const handleOnChange = useCallback(
     (e: React.ChangeEvent<HTMLFormElement>) => {
-      const formData = new FormData(e.currentTarget);
-      const coercedData = coerceFormData(formData, config.schema);
-      setFormData(formData);
-      setInternalData(coercedData);
-      if (
-        config.shouldValidate &&
-        submitAttempts > 0 &&
-        validateFormData(coercedData).success === false
-      ) {
-        return;
-      }
-      if (typeof onChange === "function") {
-        onChange(e);
-      }
+      startValidationTransition(() => {
+        const formData = new FormData(e.currentTarget);
+        const coercedData = coerceFormData(formData, config.schema);
+        setFormData(formData);
+        internalDataRef.current = coercedData;
+        if (
+          config.shouldValidate &&
+          submitAttempts > 0 &&
+          validateFormData(coercedData).success === false
+        ) {
+          return;
+        }
+        if (typeof onChange === "function") {
+          onChange(e);
+        }
+      });
     },
     [config.schema, config.shouldValidate, submitAttempts, validateFormData],
   );
 
   const handleOnBlur = useCallback(
     (e: React.FocusEvent<HTMLFormElement, HTMLElement>) => {
-      const field = e.target;
-      const formData = new FormData(e.currentTarget as HTMLFormElement);
-      const coercedData = coerceFormData(formData, config.schema);
-      setFormData(formData);
-      setInternalData(coercedData);
+      startValidationTransition(() => {
+        const field = e.target;
+        const formData = new FormData(e.currentTarget as HTMLFormElement);
+        const coercedData = coerceFormData(formData, config.schema);
+        setFormData(formData);
+        internalDataRef.current = coercedData;
 
-      if (config?.shouldValidate) {
-        validateFormData(coercedData, field.name);
-      }
+        if (config?.shouldValidate) {
+          validateFormData(coercedData, field.name);
+        }
 
-      if (typeof onBlur === "function") {
-        onBlur(e);
-      }
+        if (typeof onBlur === "function") {
+          onBlur(e);
+        }
+      });
     },
     [],
   );
@@ -184,12 +191,12 @@ function UmbracoForm(props: UmbracoFormProps) {
       return true;
     }
     const fieldAliasesWithIssues = validateFormData(
-      internalData,
+      internalDataRef.current,
     ).error?.issues?.flatMap((issue) => issue.path.join("."));
 
     const fieldsWithConditionsMet = filterFieldsByConditions(
       form,
-      internalData,
+      internalDataRef.current,
       config.mapCustomFieldToZodType,
     ).map((field) => field.alias);
 
@@ -209,13 +216,7 @@ function UmbracoForm(props: UmbracoFormProps) {
       return false;
     }
     return true;
-  }, [
-    config.shouldValidate,
-    form,
-    validateFormData,
-    internalData,
-    currentPage,
-  ]);
+  }, [config.shouldValidate, form, validateFormData, currentPage]);
 
   const focusFirstInvalidField = useCallback(() => {
     const fieldWithIssues = formIssues?.find((issue) => issue.path.length > 0);

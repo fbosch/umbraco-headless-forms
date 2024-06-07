@@ -2,7 +2,6 @@ import { match } from "ts-pattern";
 import { isConditionFulfilled } from "./predicates";
 import type {
   FormFieldDto,
-  UmbracoFormConfig,
   FormDto,
   FormPageDto,
   DtoWithCondition,
