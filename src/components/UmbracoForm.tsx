@@ -144,52 +144,8 @@ function UmbracoForm(props: UmbracoFormProps) {
     [form, config.schema],
   );
 
-  const handleOnChange = useCallback(
-    (e: React.ChangeEvent<HTMLFormElement>) => {
-      startValidationTransition(() => {
-        const formData = new FormData(e.currentTarget);
-        const coercedData = coerceFormData(formData, config.schema);
-        internalDataRef.current = coercedData;
-        if (
-          config.shouldValidate &&
-          submitAttempts > 0 &&
-          validateFormData(coercedData).success === false
-        ) {
-          return;
-        }
-        if (typeof onChange === "function") {
-          onChange(e);
-        }
-      });
-    },
-    [config.schema, config.shouldValidate, submitAttempts, validateFormData],
-  );
-
-  const handleOnBlur = useCallback(
-    (e: React.FocusEvent<HTMLFormElement, HTMLElement>) => {
-      const field = e.target;
-      const formData = new FormData(e.currentTarget as HTMLFormElement);
-      const coercedData = coerceFormData(formData, config.schema);
-      internalDataRef.current = coercedData;
-
-      if (config?.shouldValidate) {
-        startValidationTransition(() => {
-          validateFormData(coercedData, field.name);
-        });
-      }
-
-      if (typeof onBlur === "function") {
-        onBlur(e);
-      }
-    },
-    [],
-  );
-
   const isCurrentPageValid = useCallback(() => {
     const activePage = form?.pages?.[currentPage];
-    if (config.shouldValidate === false) {
-      return true;
-    }
 
     // dont validate fields that are not visible to the user
     const fieldsWithConditionsMet = filterFieldsByConditions(
@@ -230,14 +186,56 @@ function UmbracoForm(props: UmbracoFormProps) {
     ) {
       // prevent user from going to next page if there are fields with issues on the current page
 
-      startValidationTransition(() => {
-        setSubmitAttempts((prev) => prev + 1);
-        setSummaryIssues(pageIssues);
-      });
+      setSubmitAttempts((prev) => prev + 1);
+      setSummaryIssues(pageIssues);
       return false;
     }
     return true;
   }, [config.shouldValidate, form, validateFormData, currentPage]);
+
+  const handleOnChange = useCallback(
+    (e: React.ChangeEvent<HTMLFormElement>) => {
+      startValidationTransition(() => {
+        const formData = new FormData(e.currentTarget);
+        const coercedData = coerceFormData(formData, config.schema);
+        internalDataRef.current = coercedData;
+        if (
+          config.shouldValidate &&
+          submitAttempts > 0 &&
+          validateFormData(coercedData).success === false
+        ) {
+          return;
+        }
+        if (typeof onChange === "function") {
+          onChange(e);
+        }
+      });
+    },
+    [config.schema, config.shouldValidate, submitAttempts, validateFormData],
+  );
+
+  const handleOnBlur = useCallback(
+    (e: React.FocusEvent<HTMLFormElement, HTMLElement>) => {
+      const field = e.target;
+      const formData = new FormData(e.currentTarget as HTMLFormElement);
+      const coercedData = coerceFormData(formData, config.schema);
+      internalDataRef.current = coercedData;
+
+      if (config?.shouldValidate) {
+        startValidationTransition(() => {
+          validateFormData(coercedData, field.name);
+          if (form.pages && form.pages?.length > 1) {
+            isCurrentPageValid();
+          }
+        });
+      }
+
+      if (typeof onBlur === "function") {
+        onBlur(e);
+      }
+    },
+    [validateFormData, form, isCurrentPageValid],
+  );
 
   const scrollToTopOfForm = useCallback(() => {
     const formElement = document.getElementById("[name='" + form.id + "']");
@@ -296,9 +294,9 @@ function UmbracoForm(props: UmbracoFormProps) {
 
   const handleOnSubmit = useCallback(
     (e: React.FormEvent<HTMLFormElement>) => {
-      setSubmitAttempts((prev) => prev + 1);
       if (config.shouldValidate) {
         startValidationTransition(() => {
+          setSubmitAttempts((prev) => prev + 1);
           const submitData = coerceFormData(
             new FormData(e.currentTarget),
             config.schema,

@@ -239,7 +239,7 @@ export function DefaultValidationSummary(props: ValidationSummaryProps) {
           const id = getIssueId(field, issue);
           return (
             <li key={id} id={id}>
-              {field?.caption}: {issue.message}
+              {issue.message}
             </li>
           );
         })}

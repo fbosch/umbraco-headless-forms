@@ -1,5 +1,6 @@
+import { createPortal } from "react-dom";
 import "./App.css";
-import { useState } from "react";
+import { useState, useRef } from "react";
 import clsx from "clsx";
 
 import UmbracoForm, {
@@ -9,12 +10,14 @@ import UmbracoForm, {
 } from "./components/UmbracoForm";
 
 import formDefinition from "./form-definition";
+import { DefaultValidationSummary } from "./components/umbraco-form-default-components";
 
 const form = formDefinition as unknown as FormDto;
 
 const schema = umbracoFormToZod(form);
 
 function App() {
+  const summaryRef = useRef<HTMLDivElement | null>(null);
   const [sentForm, setSentForm] = useState<Object | undefined>();
   return (
     <div className="p-4">
@@ -27,6 +30,12 @@ function App() {
         <UmbracoForm
           form={form}
           config={{ schema, shouldValidate: true }}
+          renderValidationSummary={(props) =>
+            createPortal(
+              <DefaultValidationSummary {...props} />,
+              summaryRef.current ?? document.body,
+            )
+          }
           renderPage={(props) => (
             <div className="space-y-4 mb-4">
               <UmbracoForm.Page {...props} />
@@ -49,6 +58,12 @@ function App() {
                 rounded: props.field?.type?.name !== "Multiple choice",
               })}
             />
+          )}
+          renderSubmitButton={(props) => (
+            <>
+              <div id="summary" ref={summaryRef} />
+              <UmbracoForm.SubmitButton {...props} />
+            </>
           )}
           onSubmit={(e) => {
             e.preventDefault();

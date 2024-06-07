@@ -62,7 +62,7 @@ export function areAllRulesFulfilled(
     const targetField = getFieldById(form, rule.field);
     if (targetField === undefined || targetField.alias === undefined) {
       throw new Error(
-        `Rule target for field id: "${rule.field}", could not be found in the form definition`,
+        `Rule target for field id: "${rule.field}" could not be found in the form definition`,
       );
     }
     const fieldZodType = mapFieldToZod(targetField, mapCustomFieldToZodType);
