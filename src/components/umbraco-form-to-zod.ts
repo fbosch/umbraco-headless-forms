@@ -4,14 +4,40 @@ import type {
   FormFieldDto,
   FormDto,
   DefaultFormFieldTypeName,
-  UmbracoFormConfig,
   MapFormFieldToZod,
-  FormShape,
 } from "./types";
+
+/** converts a form definition to a zod schema */
+export function umbracoFormToZod(
+  form: FormDto,
+  mapCustomFieldToZodType?: MapFormFieldToZod,
+) {
+  const fields = form?.pages?.flatMap((page) =>
+    page?.fieldsets?.flatMap((fieldset) =>
+      fieldset?.columns?.flatMap((column) => column.fields),
+    ),
+  );
+
+  const mappedFields = fields?.reduce<Record<string, z.ZodTypeAny>>(
+    (acc, field) => {
+      if (!field?.alias) return acc;
+      return {
+        ...acc,
+        [field.alias]: mapFieldToZod(field, mapCustomFieldToZodType),
+      };
+    },
+    {},
+  );
+
+  return z.object({ ...mappedFields }).transform((value) =>
+    // don't validate form fields that are not visible due to condition
+    omitFieldsBasedOnConditionFromData(form, value, mapCustomFieldToZodType),
+  );
+}
 
 /** map umbraco form fields to zod type */
 export function mapFieldToZod(
-  field?: FormFieldDto,
+  field: FormFieldDto | undefined,
   mapCustomFieldToZodType?: MapFormFieldToZod,
 ): z.ZodTypeAny {
   let zodType;
@@ -27,6 +53,9 @@ export function mapFieldToZod(
         required_error: field?.requiredErrorMessage,
         coerce: true,
       });
+      if (field?.required) {
+        zodType = zodType.min(1);
+      }
       if (field?.pattern) {
         const regex = new RegExp(field.pattern);
         zodType = zodType.refine((value) => regex.test(value), {
@@ -63,63 +92,43 @@ export function mapFieldToZod(
       return exhaustiveCheck(type);
   }
 
-  if (field?.required === false) {
+  if (!field?.required) {
     zodType = zodType.optional();
   }
 
   return zodType;
 }
 
-/** converts a form definition to a zod schema */
-export function umbracoFormToZod(
-  form: FormDto,
-  config?: Omit<UmbracoFormConfig, "schema">,
-) {
-  const fields = form?.pages?.flatMap((page) =>
-    page?.fieldsets?.flatMap((fieldset) =>
-      fieldset?.columns?.flatMap((column) => column.fields),
-    ),
-  );
-
-  const mappedFields = fields?.reduce<Record<string, z.ZodTypeAny>>(
-    (acc, field) => {
-      if (!field?.alias) return acc;
-      return {
-        ...acc,
-        [field.alias]: mapFieldToZod(field, config?.mapCustomFieldToZodType),
-      };
-    },
-    {},
-  );
-
-  return z.object({ ...mappedFields });
-}
-
 /** omit fields from data that are not visible to the user */
-export function omitFieldsBasedOnConditionFromData<TData extends FormShape>(
+export function omitFieldsBasedOnConditionFromData(
   form: FormDto,
-  data: TData,
-  config: UmbracoFormConfig,
+  data: Record<string, unknown>,
+  mapCustomFieldToZodType?: MapFormFieldToZod,
 ) {
   let output: Record<string, unknown> = {};
-  const visibleFields = filterFieldsByConditions(form, data, config);
+  const visibleFields = filterFieldsByConditions(
+    form,
+    data,
+    mapCustomFieldToZodType,
+  );
   visibleFields.forEach((field) => {
     if (field.alias) {
       output[field.alias] = data[field.alias];
     }
   });
-  return output as Partial<TData>;
+  return output;
 }
 
 /** coerces form data to the schema format */
 export function coerceFormData(
   formData: FormData | undefined,
   schema: ReturnType<typeof umbracoFormToZod>,
-) {
-  let output: z.infer<typeof schema> = {};
+): Record<string, unknown> {
+  let output = {};
   if (!formData) return output;
+  const baseDef = findBaseDef<z.ZodObject<Record<string, any>>>(schema);
 
-  for (let key of Object.keys(schema.shape)) {
+  for (let key of Object.keys(baseDef.shape)) {
     parseParams(output, schema, key, formData.get(key));
   }
 
@@ -147,7 +156,7 @@ export function coerceRuleValue(def: z.ZodTypeAny, value: unknown): any {
 }
 
 /** recursively find the base definition for a given ZodType */
-function findBaseDef(def: z.ZodTypeAny) {
+function findBaseDef<R extends z.ZodTypeAny>(def: z.ZodTypeAny) {
   if (def instanceof z.ZodOptional || def instanceof z.ZodDefault) {
     return findBaseDef(def._def.innerType);
   } else if (def instanceof z.ZodArray) {
@@ -155,7 +164,7 @@ function findBaseDef(def: z.ZodTypeAny) {
   } else if (def instanceof z.ZodEffects) {
     return findBaseDef(def._def.schema);
   }
-  return def;
+  return def as R;
 }
 
 function processDef(def: z.ZodTypeAny, o: any, key: string, value: string) {

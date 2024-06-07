@@ -1,10 +1,9 @@
 import type {
-  FormShape,
   FormFieldDto,
   FieldConditionRuleOperator,
   FormDto,
-  UmbracoFormConfig,
   DtoWithCondition,
+  MapFormFieldToZod,
 } from "./types";
 import { getFieldById, exhaustiveCheck } from "./utils";
 import { mapFieldToZod, coerceRuleValue } from "./umbraco-form-to-zod";
@@ -22,13 +21,18 @@ export function shouldShowIndicator(field: FormFieldDto, form: FormDto) {
 }
 
 /** get evaluated condition rules for a given page, fieldset or field */
-export function isConditionFulfilled<TData extends FormShape>(
+export function isConditionFulfilled(
   dto: DtoWithCondition,
   form: FormDto,
-  data: TData,
-  config: UmbracoFormConfig,
+  data: Record<string, unknown>,
+  mapCustomFieldToZodType?: MapFormFieldToZod,
 ): boolean {
-  const isFulfilled = areAllRulesFulfilled(dto, form, data, config);
+  const isFulfilled = areAllRulesFulfilled(
+    dto,
+    form,
+    data,
+    mapCustomFieldToZodType,
+  );
 
   if (dto?.condition?.actionType === "Show") {
     return isFulfilled;
@@ -41,22 +45,19 @@ export function isConditionFulfilled<TData extends FormShape>(
   return true;
 }
 
-export function areAllRulesFulfilled<TData extends FormShape>(
+export function areAllRulesFulfilled(
   dto: DtoWithCondition,
   form: FormDto,
-  data: TData,
-  config: UmbracoFormConfig,
+  data: Record<string, unknown>,
+  mapCustomFieldToZodType?: MapFormFieldToZod,
 ) {
   const rules = dto?.condition?.rules;
   if (!rules || rules.length === 0) return true;
 
   const appliedRules = rules.map((rule): boolean => {
-    const operator = rule.operator as FieldConditionRuleOperator;
+    const operator = rule?.operator as FieldConditionRuleOperator;
     const targetField = getFieldById(form, rule.field);
-    const fieldZodType = mapFieldToZod(
-      targetField,
-      config.mapCustomFieldToZodType,
-    );
+    const fieldZodType = mapFieldToZod(targetField, mapCustomFieldToZodType);
     const fieldValue = data[targetField?.alias as string];
     const ruleValue = coerceRuleValue(fieldZodType, rule.value);
 

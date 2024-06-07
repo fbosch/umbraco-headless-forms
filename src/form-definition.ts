@@ -269,7 +269,7 @@ export default {
                     "Please provide a valid value for More info",
                   placeholder: "",
                   preValues: [],
-                  required: false,
+                  required: true,
                   requiredErrorMessage: "Please provide a value for More info",
                   settings: {
                     defaultValue: "",

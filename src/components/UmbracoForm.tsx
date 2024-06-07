@@ -5,7 +5,6 @@ import React, {
   useState,
   useContext,
 } from "react";
-import { z } from "zod";
 import type {
   UmbracoFormContext,
   UmbracoFormConfig,
@@ -78,11 +77,12 @@ function UmbracoForm(props: UmbracoFormProps) {
     children,
     onChange,
     onSubmit,
+    onBlur,
     ...rest
   } = props;
 
   const config: UmbracoFormConfig = {
-    schema: configOverride?.schema ?? umbracoFormToZod(form, configOverride),
+    schema: configOverride?.schema ?? umbracoFormToZod(form),
     shouldValidate: false,
     shouldUseNativeValidation: false,
     ...configOverride,
@@ -90,59 +90,98 @@ function UmbracoForm(props: UmbracoFormProps) {
 
   const [submitAttempts, setSubmitAttempts] = useState<number>(0);
   const [formData, setFormData] = useState<FormData | undefined>(undefined);
-  const [data, setData] = useState<z.infer<typeof config.schema>>({});
+  const [internalData, setInternalData] = useState<Record<string, unknown>>({});
   const [formIssues, setFormIssues] = useState<ZodIssue[]>([]);
   const [currentPage, setCurrentPage] = useState(0);
 
   const checkCondition = (dto: DtoWithCondition) =>
-    isConditionFulfilled(dto, form, data, config);
+    isConditionFulfilled(
+      dto,
+      form,
+      internalData,
+      config?.mapCustomFieldToZodType,
+    );
 
   const totalPages = form?.pages?.filter(checkCondition).length ?? 1;
 
   const validateFormData = useCallback(
-    (coercedData: z.infer<typeof config.schema>) => {
+    (coercedData: Record<string, unknown>, fieldName?: string) => {
       const parsedForm = config?.schema?.safeParse(coercedData);
       if (parsedForm?.success) {
         setFormIssues([]);
       } else if (parsedForm?.error?.issues) {
-        setFormIssues(parsedForm.error.issues);
+        setFormIssues((prev) => [
+          ...prev.filter((issue) => {
+            if (fieldName) {
+              return issue.path.join(".") !== fieldName;
+            }
+            return true;
+          }),
+          ...parsedForm.error.issues.filter((issue) => {
+            if (fieldName) {
+              return issue.path.join(".") === fieldName;
+            }
+            return true;
+          }),
+        ]);
       }
       return parsedForm;
     },
-    [form],
+    [form, config.schema],
   );
 
-  const handleOnChange = (e: React.ChangeEvent<HTMLFormElement>) => {
-    const formData = new FormData(e.currentTarget);
-    const coercedData = coerceFormData(formData, config.schema);
-    setFormData(formData);
-    setData(coercedData);
-    if (
-      config.shouldValidate &&
-      submitAttempts > 0 &&
-      validateFormData(coercedData).success === false
-    ) {
-      return;
-    }
-    if (typeof onChange === "function") {
-      onChange(e);
-    }
-  };
+  const handleOnChange = useCallback(
+    (e: React.ChangeEvent<HTMLFormElement>) => {
+      const formData = new FormData(e.currentTarget);
+      const coercedData = coerceFormData(formData, config.schema);
+      setFormData(formData);
+      setInternalData(coercedData);
+      if (
+        config.shouldValidate &&
+        submitAttempts > 0 &&
+        validateFormData(coercedData).success === false
+      ) {
+        return;
+      }
+      if (typeof onChange === "function") {
+        onChange(e);
+      }
+    },
+    [config.schema, config.shouldValidate, submitAttempts, validateFormData],
+  );
 
-  const activePageDefinition = form?.pages?.[currentPage];
+  const handleOnBlur = useCallback(
+    (e: React.FocusEvent<HTMLFormElement, HTMLElement>) => {
+      const field = e.target;
+      const formData = new FormData(e.currentTarget as HTMLFormElement);
+      const coercedData = coerceFormData(formData, config.schema);
+      setFormData(formData);
+      setInternalData(coercedData);
+
+      if (config?.shouldValidate) {
+        validateFormData(coercedData, field.name);
+      }
+
+      if (typeof onBlur === "function") {
+        onBlur(e);
+      }
+    },
+    [],
+  );
 
   const isCurrentPageValid = useCallback(() => {
+    const activePageDefinition = form?.pages?.[currentPage];
     if (config.shouldValidate === false) {
       return true;
     }
     const fieldAliasesWithIssues = validateFormData(
-      data,
+      internalData,
     ).error?.issues?.flatMap((issue) => issue.path.join("."));
 
     const fieldsWithConditionsMet = filterFieldsByConditions(
       form,
-      data,
-      config,
+      internalData,
+      config.mapCustomFieldToZodType,
     ).map((field) => field.alias);
 
     // get all fields on the current page and filter out fields with conditions that are not met
@@ -161,12 +200,16 @@ function UmbracoForm(props: UmbracoFormProps) {
       return false;
     }
     return true;
-  }, [form, data, config, currentPage]);
+  }, [
+    config.shouldValidate,
+    form,
+    validateFormData,
+    internalData,
+    currentPage,
+  ]);
 
-  const focusFirstInvalidField = () => {
-    const fieldWithIssues = validateFormData(data).error?.issues?.find(
-      (issue) => issue.path.length > 0,
-    );
+  const focusFirstInvalidField = useCallback(() => {
+    const fieldWithIssues = formIssues?.find((issue) => issue.path.length > 0);
     if (fieldWithIssues) {
       const fieldId = fieldWithIssues.path.join(".");
       if (fieldId) {
@@ -178,36 +221,48 @@ function UmbracoForm(props: UmbracoFormProps) {
         }
       }
     }
-  };
+  }, [formIssues]);
 
-  const handleNextPage = (e: React.MouseEvent<HTMLButtonElement>) => {
-    e.preventDefault();
-    if (isCurrentPageValid() === false) {
-      focusFirstInvalidField();
-      return;
-    }
-    setCurrentPage((prev) => prev + 1);
-  };
-
-  const handlePreviousPage = (e: React.MouseEvent<HTMLButtonElement>) => {
-    e.preventDefault();
-    if (currentPage === 0) {
-      return;
-    }
-    setCurrentPage((prev) => prev - 1);
-  };
-
-  const handleOnSubmit = (e: React.FormEvent<HTMLFormElement>) => {
-    setSubmitAttempts((prev) => prev + 1);
-    if (config.shouldValidate && validateFormData(data).success === false) {
+  const handleNextPage = useCallback(
+    (e: React.MouseEvent<HTMLButtonElement>) => {
       e.preventDefault();
-      focusFirstInvalidField();
-      return;
-    }
-    if (typeof onSubmit === "function") {
-      onSubmit(e);
-    }
-  };
+      if (isCurrentPageValid() === false) {
+        focusFirstInvalidField();
+        return;
+      }
+      setCurrentPage((prev) => prev + 1);
+    },
+    [isCurrentPageValid],
+  );
+
+  const handlePreviousPage = useCallback(
+    (e: React.MouseEvent<HTMLButtonElement>) => {
+      e.preventDefault();
+      setCurrentPage((prev) => (prev === 0 ? prev : prev - 1));
+    },
+    [],
+  );
+
+  const handleOnSubmit = useCallback(
+    (e: React.FormEvent<HTMLFormElement>) => {
+      setSubmitAttempts((prev) => prev + 1);
+      if (config.shouldValidate) {
+        const submitData = coerceFormData(
+          new FormData(e.currentTarget),
+          config.schema,
+        );
+        e.preventDefault();
+        if (validateFormData(submitData).success === false) {
+          focusFirstInvalidField();
+          return;
+        }
+      }
+      if (typeof onSubmit === "function") {
+        onSubmit(e);
+      }
+    },
+    [focusFirstInvalidField, config.schema, onSubmit],
+  );
 
   return (
     <UmbracoFormContext.Provider
@@ -225,6 +280,7 @@ function UmbracoForm(props: UmbracoFormProps) {
         {...rest}
         onChange={handleOnChange}
         onSubmit={handleOnSubmit}
+        onBlur={handleOnBlur}
       >
         {form?.pages?.map((page, index) => (
           <Page

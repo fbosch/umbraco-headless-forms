@@ -1,13 +1,13 @@
 import { match } from "ts-pattern";
 import { isConditionFulfilled } from "./predicates";
 import type {
-  FormShape,
   FormFieldDto,
   UmbracoFormConfig,
   FormDto,
   FormPageDto,
   DtoWithCondition,
   UmbracoFormFieldSettingsMap,
+  MapFormFieldToZod,
 } from "./types";
 import { z } from "zod";
 
@@ -25,17 +25,11 @@ export function getAllFields(form: FormDto) {
 }
 
 /** get a field by id */
-export function getFieldById(
-  form: FormDto,
-  id?: string,
-): FormFieldDto | undefined {
+export function getFieldById(form: FormDto, id?: string) {
   return getAllFields(form)?.find((field) => field?.id === id);
 }
 
-export function getFieldByAlias(
-  form: FormDto,
-  alias?: string,
-): FormFieldDto | undefined {
+export function getFieldByAlias(form: FormDto, alias?: string) {
   return getAllFields(form)?.find((field) => field?.alias === alias);
 }
 
@@ -48,13 +42,15 @@ export function getAllFieldsOnPage(page?: FormPageDto) {
 }
 
 /** walks the form definition and returns all fields that are visible to the user */
-export function filterFieldsByConditions<TData extends FormShape>(
+export function filterFieldsByConditions(
   form: FormDto,
-  data: TData,
-  config: UmbracoFormConfig,
+  data: Record<string, unknown>,
+  mapCustomFieldToZodType?: MapFormFieldToZod,
 ): FormFieldDto[] {
   const checkCondition = (dto?: DtoWithCondition) =>
-    dto ? isConditionFulfilled(dto, form, data, config) : false;
+    dto
+      ? isConditionFulfilled(dto, form, data, mapCustomFieldToZodType)
+      : false;
 
   return form?.pages
     ?.filter(checkCondition)
@@ -86,6 +82,8 @@ export function getAttributesForFieldType(
     ["aria-errormessage"]:
       validate && hasIssues ? issues.at(0)?.message : undefined,
   };
+
+  console.log(field.alias, field.required);
 
   const defaultValue = match(field?.type?.name)
     .with(
