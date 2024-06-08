@@ -40,7 +40,7 @@ export interface UmbracoFormProps
   renderFieldset?: RenderFn<typeof defaultComponents.Fieldset>;
   renderColumn?: RenderFn<typeof defaultComponents.Column>;
   renderField?: RenderFn<typeof defaultComponents.Field>;
-  renderInput?: RenderFn<typeof defaultComponents.Input>;
+  renderFieldType?: RenderFn<typeof defaultComponents.FieldType>;
   renderValidationSummary?: RenderFn<
     typeof defaultComponents.ValidationSummary
   >;
@@ -65,7 +65,7 @@ function UmbracoForm(props: UmbracoFormProps) {
     renderFieldset: Fieldset = defaultComponents.Fieldset,
     renderColumn: Column = defaultComponents.Column,
     renderField: Field = defaultComponents.Field,
-    renderInput: Input = defaultComponents.Input,
+    renderFieldType: FieldType = defaultComponents.FieldType,
     renderSubmitButton: SubmitButton = defaultComponents.SubmitButton,
     renderNextButton: NextButton = defaultComponents.NextButton,
     renderPreviousButton: PreviousButton = defaultComponents.PreviousButton,
@@ -183,7 +183,6 @@ function UmbracoForm(props: UmbracoFormProps) {
       startValidationTransition(() => {
         const formData = new FormData(e.currentTarget);
         const coercedData = coerceFormData(formData, config.schema);
-        console.log(coercedData);
         internalDataRef.current = coercedData;
         if (
           config.shouldValidate &&
@@ -366,7 +365,8 @@ function UmbracoForm(props: UmbracoFormProps) {
                         >
                           {
                             // fallback to default component if custom component returns undefined
-                            Input(inputProps) ?? Input(inputProps)
+                            FieldType(inputProps) ??
+                              defaultComponents.FieldType(inputProps)
                           }
                         </Field>
                       );
@@ -390,7 +390,7 @@ function UmbracoForm(props: UmbracoFormProps) {
   );
 }
 
-UmbracoForm.Input = defaultComponents.Input;
+UmbracoForm.FieldType = defaultComponents.FieldType;
 UmbracoForm.Page = defaultComponents.Page;
 UmbracoForm.Fieldset = defaultComponents.Fieldset;
 UmbracoForm.Column = defaultComponents.Column;

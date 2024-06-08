@@ -50,8 +50,8 @@ function App() {
               <UmbracoForm.Field {...props} />
             </div>
           )}
-          renderInput={(props) => (
-            <UmbracoForm.Input
+          renderFieldType={(props) => (
+            <UmbracoForm.FieldType
               {...props}
               className={clsx({
                 rounded: props.field?.type?.name !== "Single choice",

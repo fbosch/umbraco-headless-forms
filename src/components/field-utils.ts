@@ -7,7 +7,7 @@ import {
   type DtoWithCondition,
   type FieldSettings,
   type UmbracoFormContext,
-  FieldType,
+  FieldTypeEnum,
 } from "./types";
 import { z } from "zod";
 import { getIssueId, type MapFormFieldToZodFn } from "./umbraco-form-to-zod";
@@ -186,7 +186,7 @@ export function getAttributesForFieldType(
     "defaultValue" in field.settings ? field.settings.defaultValue : undefined;
 
   const textAttributes = match(field?.type?.id)
-    .with(FieldType.ShortAnswer, FieldType.LongAnswer, (id) => {
+    .with(FieldTypeEnum.ShortAnswer, FieldTypeEnum.LongAnswer, (id) => {
       const settings = field?.settings as FieldSettings[typeof id];
       return {
         autoComplete: settings?.autocompleteAttribute || undefined,
@@ -204,7 +204,7 @@ export function getAttributesForFieldType(
     .otherwise(() => {});
 
   return match(field?.type?.id.toLowerCase())
-    .with(FieldType.ShortAnswer, (id) => {
+    .with(FieldTypeEnum.ShortAnswer, (id) => {
       const settings = field?.settings as FieldSettings[typeof id];
       return {
         type: settings?.fieldType || "text",
@@ -213,7 +213,7 @@ export function getAttributesForFieldType(
         ...textAttributes,
       } satisfies React.InputHTMLAttributes<HTMLInputElement>;
     })
-    .with(FieldType.LongAnswer, (id) => {
+    .with(FieldTypeEnum.LongAnswer, (id) => {
       const settings = field?.settings as FieldSettings[typeof id];
       return {
         defaultValue,
@@ -224,13 +224,13 @@ export function getAttributesForFieldType(
           : undefined,
       } satisfies React.TextareaHTMLAttributes<HTMLTextAreaElement>;
     })
-    .with(FieldType.MultipleChoice, () => ({
+    .with(FieldTypeEnum.MultipleChoice, () => ({
       type: "radio",
       ...commonAttributes,
     }))
     .with(
-      FieldType.Checkbox,
-      FieldType.DataConsent,
+      FieldTypeEnum.Checkbox,
+      FieldTypeEnum.DataConsent,
       () =>
         ({
           type: "checkbox",
@@ -239,15 +239,15 @@ export function getAttributesForFieldType(
         }) satisfies React.InputHTMLAttributes<HTMLInputElement>,
     )
     .with(
-      FieldType.Recaptcha2,
-      FieldType.RecaptchaV3WithScore,
+      FieldTypeEnum.Recaptcha2,
+      FieldTypeEnum.RecaptchaV3WithScore,
       () =>
         ({
           type: "hidden",
           ...commonAttributes,
         }) satisfies React.InputHTMLAttributes<HTMLInputElement>,
     )
-    .with(FieldType.DropdownList, (id) => {
+    .with(FieldTypeEnum.DropdownList, (id) => {
       const settings = field?.settings as FieldSettings[typeof id];
       return {
         defaultValue,
@@ -255,20 +255,20 @@ export function getAttributesForFieldType(
         multiple: !!settings?.allowMultipleSelections ?? false,
       } satisfies React.SelectHTMLAttributes<HTMLSelectElement>;
     })
-    .with(FieldType.Date, () => ({
+    .with(FieldTypeEnum.Date, () => ({
       type: "date",
       ...commonAttributes,
     }))
-    .with(FieldType.Password, () => ({
+    .with(FieldTypeEnum.Password, () => ({
       type: "password",
       ...commonAttributes,
     }))
-    .with(FieldType.RichText, () => ({
+    .with(FieldTypeEnum.RichText, () => ({
       type: "textarea",
       ...commonAttributes,
     }))
     .with(
-      FieldType.FileUpload,
+      FieldTypeEnum.FileUpload,
       () =>
         ({
           type: "file",

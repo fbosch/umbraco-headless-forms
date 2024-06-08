@@ -5,7 +5,7 @@ import {
   getAllFields,
   getFieldByZodIssue,
 } from "./field-utils";
-import { FieldType, type FormFieldDto, type FormDto } from "./types";
+import { FieldTypeEnum, type FormFieldDto, type FormDto } from "./types";
 
 /** convert a form field definition to a zod type */
 export type MapFormFieldToZodFn = (field?: FormFieldDto) => z.ZodTypeAny;
@@ -24,6 +24,7 @@ export function umbracoFormToZod(
 
   const mappedFields = fields?.reduce<Record<string, z.ZodTypeAny>>(
     (acc, field) => {
+      if (field?.type?.id === FieldTypeEnum.TitleAndDescription) return acc; // skip title and description fields
       if (!field?.alias) return acc;
       return {
         ...acc,
@@ -48,11 +49,11 @@ export function mapFieldToZod(
 
   match(field?.type?.id.toLowerCase())
     .with(
-      FieldType.ShortAnswer,
-      FieldType.LongAnswer,
-      FieldType.FileUpload,
-      FieldType.DropdownList,
-      FieldType.SingleChoice,
+      FieldTypeEnum.ShortAnswer,
+      FieldTypeEnum.LongAnswer,
+      FieldTypeEnum.FileUpload,
+      FieldTypeEnum.DropdownList,
+      FieldTypeEnum.SingleChoice,
       () => {
         zodType = z.string({
           required_error: field?.requiredErrorMessage,
@@ -75,14 +76,17 @@ export function mapFieldToZod(
         }
       },
     )
-    .with(FieldType.MultipleChoice, () => {
+    .with(FieldTypeEnum.MultipleChoice, () => {
       zodType = z.array(z.string());
     })
+    .with(FieldTypeEnum.Date, () => {
+      zodType = z.string().date();
+    })
     .with(
-      FieldType.Checkbox,
-      FieldType.DataConsent,
-      FieldType.Recaptcha2,
-      FieldType.RecaptchaV3WithScore,
+      FieldTypeEnum.Checkbox,
+      FieldTypeEnum.DataConsent,
+      FieldTypeEnum.Recaptcha2,
+      FieldTypeEnum.RecaptchaV3WithScore,
       () => {
         zodType = z.boolean({
           coerce: true,

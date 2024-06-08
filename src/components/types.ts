@@ -4,9 +4,9 @@ import {
 } from "./umbraco-form-to-zod";
 import type { components } from "./umbraco-form.d.ts";
 
-/** Enumeration of default form field type ids
- * * @see https://docs.umbraco.com/umbraco-forms/editor/creating-a-form/field-types */
-export enum FieldType {
+/** Enum of default form field type ids
+ * @see https://docs.umbraco.com/umbraco-forms/editor/creating-a-form/field-types */
+export enum FieldTypeEnum {
   Checkbox = "d5c0c390-ae9a-11de-a69e-666455d89593",
   DataConsent = "a72c9df9-3847-47cf-afb8-b86773fd12cd",
   Date = "f8b4c3b8-af28-11de-9dd8-ef5956d89593",
@@ -24,28 +24,28 @@ export enum FieldType {
   TitleAndDescription = "e3fbf6c4-f46c-495e-aff8-4b3c227b4a98",
 }
 
-export interface FieldTypeName {
-  [FieldType.Checkbox]: "Checkbox";
-  [FieldType.DataConsent]: "Data consent";
-  [FieldType.Date]: "Date";
-  [FieldType.DropdownList]: "Dropdown";
-  [FieldType.FileUpload]: "File upload";
-  [FieldType.LongAnswer]: "Long answer";
-  [FieldType.HiddenField]: "Hidden field";
-  [FieldType.ShortAnswer]: "Short answer";
-  [FieldType.MultipleChoice]: "Multiple choice";
-  [FieldType.Recaptcha2]: "Recaptcha2";
-  [FieldType.RecaptchaV3WithScore]: "Recaptcha v3 with score";
-  [FieldType.Password]: "Password";
-  [FieldType.RichText]: "Rich text";
-  [FieldType.SingleChoice]: "Single choice";
-  [FieldType.TitleAndDescription]: "Title and description";
+export interface FieldTypeNameMap {
+  [FieldTypeEnum.Checkbox]: "Checkbox";
+  [FieldTypeEnum.DataConsent]: "Data consent";
+  [FieldTypeEnum.Date]: "Date";
+  [FieldTypeEnum.DropdownList]: "Dropdown";
+  [FieldTypeEnum.FileUpload]: "File upload";
+  [FieldTypeEnum.LongAnswer]: "Long answer";
+  [FieldTypeEnum.HiddenField]: "Hidden field";
+  [FieldTypeEnum.ShortAnswer]: "Short answer";
+  [FieldTypeEnum.MultipleChoice]: "Multiple choice";
+  [FieldTypeEnum.Recaptcha2]: "Recaptcha2";
+  [FieldTypeEnum.RecaptchaV3WithScore]: "Recaptcha v3 with score";
+  [FieldTypeEnum.Password]: "Password";
+  [FieldTypeEnum.RichText]: "Rich text";
+  [FieldTypeEnum.SingleChoice]: "Single choice";
+  [FieldTypeEnum.TitleAndDescription]: "Title and description";
 }
 
 /** Field type settings
  * @see https://docs.umbraco.com/umbraco-forms/developer/configuration/type-details#field-types */
 export interface FieldSettings {
-  [FieldType.ShortAnswer]: {
+  [FieldTypeEnum.ShortAnswer]: {
     defaultValue: string;
     placeholder: string;
     showLabel: string;
@@ -53,7 +53,7 @@ export interface FieldSettings {
     fieldType: string;
     autocompleteAttribute: string;
   };
-  [FieldType.LongAnswer]: {
+  [FieldTypeEnum.LongAnswer]: {
     defaultValue: string;
     placeholder: string;
     showLabel: string;
@@ -61,58 +61,58 @@ export interface FieldSettings {
     numberOfRows: string;
     maximumLength: string;
   };
-  [FieldType.HiddenField]: {
+  [FieldTypeEnum.HiddenField]: {
     defaultValue: string;
   };
-  [FieldType.Checkbox]: {
+  [FieldTypeEnum.Checkbox]: {
     caption: string;
     defaultValue: string;
     showLabel: string;
   };
-  [FieldType.DropdownList]: {
+  [FieldTypeEnum.DropdownList]: {
     defaultValue: string;
     allowMultipleSelections: string;
     showLabel: string;
     autocompleteAttribute: string;
     selectPrompt: string;
   };
-  [FieldType.MultipleChoice]: {
+  [FieldTypeEnum.MultipleChoice]: {
     defaultValue: string;
     showLabel: string;
     preValues: Array<any>;
   };
-  [FieldType.DataConsent]: {
+  [FieldTypeEnum.DataConsent]: {
     acceptCopy: string;
     showLabel: string;
   };
-  [FieldType.FileUpload]: {
+  [FieldTypeEnum.FileUpload]: {
     selectFilesListHeading: string;
   };
-  [FieldType.Recaptcha2]: {
+  [FieldTypeEnum.Recaptcha2]: {
     theme: string;
     size: string;
     errorMessage: string;
   };
-  [FieldType.RecaptchaV3WithScore]: {
+  [FieldTypeEnum.RecaptchaV3WithScore]: {
     scoreThreshold: string;
     errorMessage: string;
     saveScore: string;
   };
-  [FieldType.Date]: {
+  [FieldTypeEnum.Date]: {
     placeholder: string;
   };
-  [FieldType.Password]: {
+  [FieldTypeEnum.Password]: {
     placeholder: string;
   };
-  [FieldType.RichText]: {
+  [FieldTypeEnum.RichText]: {
     showLabel: string;
     html: string;
   };
-  [FieldType.SingleChoice]: {
+  [FieldTypeEnum.SingleChoice]: {
     defaultValue: string;
     showLabel: string;
   };
-  [FieldType.TitleAndDescription]: {
+  [FieldTypeEnum.TitleAndDescription]: {
     captionTag: string;
     caption: string;
     bodyText: string;
@@ -152,8 +152,8 @@ export interface FormFieldsetColumnDto
  * @see https://docs.umbraco.com/umbraco-forms/developer/configuration/type-details#field-types */
 export interface FormFieldTypeDto
   extends Omit<components["schemas"]["FormFieldTypeDto"], "name"> {
-  name: FieldTypeName[FieldType];
-  id: FieldType;
+  name: FieldTypeNameMap[FieldTypeEnum];
+  id: FieldTypeEnum;
 }
 
 /** Form field
@@ -161,7 +161,7 @@ export interface FormFieldTypeDto
 export interface FormFieldDto
   extends Omit<components["schemas"]["FormFieldDto"], "type" | "settings"> {
   type: FormFieldTypeDto;
-  settings: FieldSettings[FieldType];
+  settings: FieldSettings[FieldTypeEnum];
 }
 
 /** Form condition

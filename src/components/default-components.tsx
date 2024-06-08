@@ -6,7 +6,7 @@ import { getAttributesForFieldType, getFieldByZodIssue } from "./field-utils";
 import { getIssueId } from "./umbraco-form-to-zod";
 import type { ZodIssue } from "zod";
 import {
-  FieldType,
+  FieldTypeEnum,
   type FormDto,
   type FormPageDto,
   type FormFieldsetDto,
@@ -120,7 +120,7 @@ export function Field({ field, children, condition, issues }: FieldProps) {
     <span id={getIssueId(field, issues[0])}>{issues?.[0]?.message}</span>
   ) : null;
 
-  if (field.type?.id === FieldType.SingleChoice) {
+  if (field.type?.id === FieldTypeEnum.SingleChoice) {
     const radioGroupId = "radiogroup:" + field.id;
     return (
       <fieldset role="radiogroup" aria-labelledby={radioGroupId}>
@@ -134,7 +134,7 @@ export function Field({ field, children, condition, issues }: FieldProps) {
     );
   }
 
-  if (field.type?.id === FieldType.MultipleChoice) {
+  if (field.type?.id === FieldTypeEnum.MultipleChoice) {
     const checkboxGroupId = "checkboxgroup:" + field.id;
     return (
       <fieldset aria-labelledby={checkboxGroupId}>
@@ -160,9 +160,9 @@ export function Field({ field, children, condition, issues }: FieldProps) {
   );
 }
 
-export type InputProps = Omit<FieldProps, "children" | "condition">;
+export type FieldTypeProps = Omit<FieldProps, "children" | "condition">;
 
-export function Input({ field, issues, ...rest }: InputProps) {
+export function FieldType({ field, issues, ...rest }: FieldTypeProps) {
   const context = useUmbracoFormContext();
   const fieldAttributes = getAttributesForFieldType(field, issues, context);
 
@@ -173,21 +173,21 @@ export function Input({ field, issues, ...rest }: InputProps) {
 
   return match(field?.type?.id)
     .with(
-      FieldType.ShortAnswer,
-      FieldType.Checkbox,
-      FieldType.DataConsent,
-      FieldType.FileUpload,
-      FieldType.Recaptcha2,
-      FieldType.RecaptchaV3WithScore,
-      FieldType.HiddenField,
-      FieldType.Date,
-      FieldType.Password,
+      FieldTypeEnum.ShortAnswer,
+      FieldTypeEnum.Checkbox,
+      FieldTypeEnum.DataConsent,
+      FieldTypeEnum.FileUpload,
+      FieldTypeEnum.Recaptcha2,
+      FieldTypeEnum.RecaptchaV3WithScore,
+      FieldTypeEnum.HiddenField,
+      FieldTypeEnum.Date,
+      FieldTypeEnum.Password,
       () => <input {...attributes} />,
     )
-    .with(FieldType.LongAnswer, FieldType.RichText, () => (
+    .with(FieldTypeEnum.LongAnswer, FieldTypeEnum.RichText, () => (
       <textarea {...attributes} />
     ))
-    .with(FieldType.SingleChoice, FieldType.MultipleChoice, (uuid) => (
+    .with(FieldTypeEnum.SingleChoice, FieldTypeEnum.MultipleChoice, (uuid) => (
       <Fragment>
         {field?.preValues?.map((preValue) => {
           const settings = field?.settings as FieldSettings[typeof uuid];
@@ -200,7 +200,7 @@ export function Input({ field, issues, ...rest }: InputProps) {
                 {...attributes}
                 id={id}
                 type={
-                  field.type?.id === FieldType.MultipleChoice
+                  field.type?.id === FieldTypeEnum.MultipleChoice
                     ? "checkbox"
                     : "radio"
                 }
@@ -211,7 +211,7 @@ export function Input({ field, issues, ...rest }: InputProps) {
         })}
       </Fragment>
     ))
-    .with(FieldType.DropdownList, () => (
+    .with(FieldTypeEnum.DropdownList, () => (
       <select {...attributes}>
         {field?.preValues?.map((preValue) => (
           <option key={`${field.id}.${preValue.value}`} value={preValue.value}>
@@ -220,7 +220,7 @@ export function Input({ field, issues, ...rest }: InputProps) {
         ))}
       </select>
     ))
-    .with(FieldType.TitleAndDescription, (uuid) => {
+    .with(FieldTypeEnum.TitleAndDescription, (uuid) => {
       const settings = field?.settings as FieldSettings[typeof uuid];
       return (
         <div>
