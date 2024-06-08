@@ -10,7 +10,6 @@ import UmbracoForm, {
 } from "./components/UmbracoForm";
 
 import formDefinition from "./form-definition";
-import { DefaultValidationSummary } from "./components/umbraco-form-default-components";
 
 const form = formDefinition as unknown as FormDto;
 
@@ -32,7 +31,7 @@ function App() {
           config={{ schema, shouldValidate: true }}
           renderValidationSummary={(props) =>
             createPortal(
-              <DefaultValidationSummary {...props} />,
+              <UmbracoForm.ValidationSummary {...props} />,
               summaryRef.current ?? document.body,
             )
           }
