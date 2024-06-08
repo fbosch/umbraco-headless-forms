@@ -162,12 +162,16 @@ export function Field({ field, children, condition, issues }: FieldProps) {
 
 export type FieldTypeProps = Omit<FieldProps, "children" | "condition">;
 
-export function FieldType({ field, issues, ...rest }: FieldTypeProps) {
+export function FieldType({
+  field,
+  issues,
+  ...rest
+}: FieldTypeProps): React.ReactNode | undefined {
   const context = useUmbracoFormContext();
-  const fieldAttributes = getAttributesForFieldType(field, issues, context);
+  const fieldTypeAttributes = getAttributesForFieldType(field, issues, context);
 
   const attributes = {
-    ...fieldAttributes,
+    ...fieldTypeAttributes,
     ...rest,
   };
 

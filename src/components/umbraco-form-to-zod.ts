@@ -16,16 +16,13 @@ export function umbracoFormToZod(
   form: FormDto,
   mapCustomFieldToZodType?: MapFormFieldToZodFn,
 ) {
-  const fields = form?.pages?.flatMap((page) =>
-    page?.fieldsets?.flatMap((fieldset) =>
-      fieldset?.columns?.flatMap((column) => column.fields),
-    ),
-  );
+  const fields = getAllFields(form);
 
   const mappedFields = fields?.reduce<Record<string, z.ZodTypeAny>>(
     (acc, field) => {
-      if (field?.type?.id === FieldTypeEnum.TitleAndDescription) return acc; // skip title and description fields
+      // skip title and description fields as they are presenative only
       if (!field?.alias) return acc;
+      if (field?.type?.id === FieldTypeEnum.TitleAndDescription) return acc;
       return {
         ...acc,
         [field.alias]: mapFieldToZod(field, mapCustomFieldToZodType),

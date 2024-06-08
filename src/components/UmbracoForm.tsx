@@ -355,7 +355,7 @@ function UmbracoForm(props: UmbracoFormProps) {
                       const issues = formIssues?.filter(
                         (issue) => issue.path.join(".") === field.alias,
                       );
-                      const inputProps = { field, issues };
+                      const fieldTypeProps = { field, issues };
                       return (
                         <Field
                           key={"field." + field?.id}
@@ -365,8 +365,8 @@ function UmbracoForm(props: UmbracoFormProps) {
                         >
                           {
                             // fallback to default component if custom component returns undefined
-                            FieldType(inputProps) ??
-                              defaultComponents.FieldType(inputProps)
+                            FieldType(fieldTypeProps) ??
+                              defaultComponents.FieldType(fieldTypeProps)
                           }
                         </Field>
                       );
