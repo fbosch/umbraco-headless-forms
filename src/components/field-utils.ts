@@ -6,11 +6,10 @@ import type {
   FormPageDto,
   DtoWithCondition,
   UmbracoFormFieldSettingsMap,
-  MapFormFieldToZod,
   UmbracoFormContext,
 } from "./types";
 import { z } from "zod";
-import { getIssueId } from "./umbraco-form-to-zod";
+import { getIssueId, type MapFormFieldToZod } from "./umbraco-form-to-zod";
 
 const cachedForms = new WeakSet<FormDto>();
 const cachedFieldsById = new WeakMap<FormDto, Map<string, FormFieldDto>>();
@@ -127,14 +126,14 @@ export function getAttributesForFieldType(
     ["aria-errormessage"]:
       // only adds error message if no error elements are present in the DOM
       shouldValidate && hasIssues && errorsAreHidden
-        ? issues.at(0)?.message
+        ? issues[0].message
         : undefined,
     // show only aria-describedby if error elements are present in the DOM
     ["aria-describedby"]:
       shouldValidate &&
       hasIssues &&
       (rendersOnlySummary || rendersOnlyLabelError)
-        ? getIssueId(field, issues.at(0))
+        ? getIssueId(field, issues[0])
         : undefined,
   };
 

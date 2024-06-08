@@ -4,18 +4,13 @@ import {
   getAllFields,
   getFieldByZodIssue,
 } from "./field-utils";
-import type {
-  FormFieldDto,
-  FormDto,
-  DefaultFormFieldTypeName,
-  MapFormFieldToZod,
-} from "./types";
+import type { FormFieldDto, FormDto, DefaultFormFieldTypeName } from "./types";
 
-export function exhaustiveCheck(value: never): never {
-  throw new Error("Exhaustive check failed for value: " + value);
-}
+/** convert a form field definition to a zod type */
+export type MapFormFieldToZod = (field?: FormFieldDto) => z.ZodTypeAny;
 
-/** converts a form definition to a zod schema */
+/** converts an umbraco form definition to a zod schema
+ * @see https://docs.umbraco.com/umbraco-forms/developer/ajaxforms#requesting-a-form-definition */
 export function umbracoFormToZod(
   form: FormDto,
   mapCustomFieldToZodType?: MapFormFieldToZod,
@@ -38,7 +33,7 @@ export function umbracoFormToZod(
   );
 
   return z.object({ ...mappedFields }).transform((value) =>
-    // don't validate form fields that are not visible due to condition
+    // don't validate form fields that are not visible due to condition somewhere in the form definition
     omitFieldsBasedOnConditionFromData(form, value, mapCustomFieldToZodType),
   );
 }
@@ -156,7 +151,7 @@ export function omitFieldsBasedOnConditionFromData(
   return output;
 }
 
-/** coerces form data to the schema format */
+/** coerces form data to a zod schema format */
 export function coerceFormData(
   formData: FormData | undefined,
   schema: ReturnType<typeof umbracoFormToZod>,
@@ -172,11 +167,12 @@ export function coerceFormData(
   return output;
 }
 
+/** coerces an umbraco condition rule value value based on a zod type */
 export function coerceRuleValue(def: z.ZodTypeAny, value: unknown): any {
   const baseShape = findBaseDef(def);
 
-  // handle specific rule values from Umbraco
   if (baseShape instanceof z.ZodBoolean) {
+    // "on"/"off" should translate to true/false in zod
     if (typeof value === "string") {
       switch (value) {
         case "true":
@@ -278,4 +274,8 @@ function parseParams(o: any, schema: any, key: string, value: any) {
   if (def) {
     processDef(def, o, key, value as string);
   }
+}
+
+function exhaustiveCheck(value: never): never {
+  throw new Error("Exhaustive check failed for value: " + value);
 }

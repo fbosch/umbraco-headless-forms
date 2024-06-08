@@ -321,7 +321,7 @@ function UmbracoForm(props: UmbracoFormProps) {
       value={{
         form,
         config,
-        submitAttempts: progressionAttemptCount,
+        progressionAttemptCount,
         totalPages,
         currentPage,
       }}
