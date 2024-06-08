@@ -183,6 +183,7 @@ function UmbracoForm(props: UmbracoFormProps) {
       startValidationTransition(() => {
         const formData = new FormData(e.currentTarget);
         const coercedData = coerceFormData(formData, config.schema);
+        console.log(coercedData);
         internalDataRef.current = coercedData;
         if (
           config.shouldValidate &&

@@ -1,12 +1,13 @@
 import { match } from "ts-pattern";
 import { isConditionFulfilled } from "./predicates";
-import type {
-  FormFieldDto,
-  FormDto,
-  FormPageDto,
-  DtoWithCondition,
-  UmbracoFormFieldSettingsMap,
-  UmbracoFormContext,
+import {
+  type FormFieldDto,
+  type FormDto,
+  type FormPageDto,
+  type DtoWithCondition,
+  type FieldSettings,
+  type UmbracoFormContext,
+  FieldType,
 } from "./types";
 import { z } from "zod";
 import { getIssueId, type MapFormFieldToZod } from "./umbraco-form-to-zod";
@@ -140,10 +141,9 @@ export function getAttributesForFieldType(
   const defaultValue =
     "defaultValue" in field.settings ? field.settings.defaultValue : undefined;
 
-  const textAttributes = match(field?.type?.name)
-    .with("Short answer", "Long answer", (typeName) => {
-      const settings =
-        field?.settings as UmbracoFormFieldSettingsMap[typeof typeName];
+  const textAttributes = match(field?.type?.id)
+    .with(FieldType.ShortAnswer, FieldType.LongAnswer, (id) => {
+      const settings = field?.settings as FieldSettings[typeof id];
       return {
         autoComplete: settings?.autocompleteAttribute || undefined,
         placeholder: field.placeholder || undefined,
@@ -159,10 +159,9 @@ export function getAttributesForFieldType(
     })
     .otherwise(() => {});
 
-  return match(field?.type?.name)
-    .with("Short answer", (typeName) => {
-      const settings =
-        field?.settings as UmbracoFormFieldSettingsMap[typeof typeName];
+  return match(field?.type?.id.toLowerCase())
+    .with(FieldType.ShortAnswer, (id) => {
+      const settings = field?.settings as FieldSettings[typeof id];
       return {
         type: settings?.fieldType || "text",
         ...commonAttributes,
@@ -170,9 +169,8 @@ export function getAttributesForFieldType(
         ...textAttributes,
       } satisfies React.InputHTMLAttributes<HTMLInputElement>;
     })
-    .with("Long answer", (typeName) => {
-      const settings =
-        field?.settings as UmbracoFormFieldSettingsMap[typeof typeName];
+    .with(FieldType.LongAnswer, (id) => {
+      const settings = field?.settings as FieldSettings[typeof id];
       return {
         defaultValue,
         ...textAttributes,
@@ -182,13 +180,13 @@ export function getAttributesForFieldType(
           : undefined,
       } satisfies React.TextareaHTMLAttributes<HTMLTextAreaElement>;
     })
-    .with("Multiple choice", () => ({
+    .with(FieldType.MultipleChoice, () => ({
       type: "radio",
       ...commonAttributes,
     }))
     .with(
-      "Checkbox",
-      "Data Consent",
+      FieldType.Checkbox,
+      FieldType.DataConsent,
       () =>
         ({
           type: "checkbox",
@@ -197,25 +195,36 @@ export function getAttributesForFieldType(
         }) satisfies React.InputHTMLAttributes<HTMLInputElement>,
     )
     .with(
-      "Recaptcha2",
-      "Recaptcha v3 with score",
+      FieldType.Recaptcha2,
+      FieldType.RecaptchaV3WithScore,
       () =>
         ({
           type: "hidden",
           ...commonAttributes,
         }) satisfies React.InputHTMLAttributes<HTMLInputElement>,
     )
-    .with("Dropdown", (typeName) => {
-      const settings =
-        field?.settings as UmbracoFormFieldSettingsMap[typeof typeName];
+    .with(FieldType.DropdownList, (id) => {
+      const settings = field?.settings as FieldSettings[typeof id];
       return {
         defaultValue,
         ...commonAttributes,
         multiple: !!settings?.allowMultipleSelections ?? false,
       } satisfies React.SelectHTMLAttributes<HTMLSelectElement>;
     })
+    .with(FieldType.Date, () => ({
+      type: "date",
+      ...commonAttributes,
+    }))
+    .with(FieldType.Password, () => ({
+      type: "password",
+      ...commonAttributes,
+    }))
+    .with(FieldType.RichText, () => ({
+      type: "textarea",
+      ...commonAttributes,
+    }))
     .with(
-      "File upload",
+      FieldType.FileUpload,
       () =>
         ({
           type: "file",

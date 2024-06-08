@@ -54,7 +54,7 @@ function App() {
             <UmbracoForm.Input
               {...props}
               className={clsx({
-                rounded: props.field?.type?.name !== "Multiple choice",
+                rounded: props.field?.type?.name !== "Single choice",
               })}
             />
           )}

@@ -1,10 +1,11 @@
 import { z } from "zod";
+import { match } from "ts-pattern";
 import {
   filterFieldsByConditions,
   getAllFields,
   getFieldByZodIssue,
 } from "./field-utils";
-import type { FormFieldDto, FormDto, DefaultFormFieldTypeName } from "./types";
+import { FieldType, type FormFieldDto, type FormDto } from "./types";
 
 /** convert a form field definition to a zod type */
 export type MapFormFieldToZod = (field?: FormFieldDto) => z.ZodTypeAny;
@@ -44,65 +45,75 @@ export function mapFieldToZod(
   mapCustomFieldToZodType?: MapFormFieldToZod,
 ): z.ZodTypeAny {
   let zodType;
-  const type = field?.type?.name as DefaultFormFieldTypeName;
 
-  switch (type) {
-    case "Short answer":
-    case "Long answer":
-    case "File upload":
-    case "Multiple choice":
-    case "Dropdown":
-      zodType = z.string({
-        required_error: field?.requiredErrorMessage,
-        coerce: true,
-      });
-      if (field?.required) {
-        zodType = zodType.min(1, field?.requiredErrorMessage);
-      }
-      if ("maximumLength" in field?.settings) {
-        zodType = zodType.max(
-          parseInt(field?.settings.maximumLength),
-          field?.patternInvalidErrorMessage,
-        );
-      }
-      if (field?.pattern) {
-        const regex = new RegExp(field.pattern);
-        zodType = zodType.refine((value) => regex.test(value), {
-          message: field.patternInvalidErrorMessage,
+  match(field?.type?.id.toLowerCase())
+    .with(
+      FieldType.ShortAnswer,
+      FieldType.LongAnswer,
+      FieldType.FileUpload,
+      FieldType.DropdownList,
+      FieldType.SingleChoice,
+      () => {
+        zodType = z.string({
+          required_error: field?.requiredErrorMessage,
+          coerce: true,
         });
-      }
-      break;
-    case "Checkbox":
-    case "Data Consent":
-    case "Recaptcha2":
-    case "Recaptcha v3 with score":
-      zodType = z.boolean({
-        coerce: true,
-      });
-      if (field?.required) {
-        zodType = zodType.refine((value) => value === true, {
-          message: field?.requiredErrorMessage,
+        if (field?.required) {
+          zodType = zodType.min(1, field?.requiredErrorMessage);
+        }
+        if ("maximumLength" in field?.settings) {
+          zodType = zodType.max(
+            parseInt(field?.settings.maximumLength),
+            field?.patternInvalidErrorMessage,
+          );
+        }
+        if (field?.pattern) {
+          const regex = new RegExp(field.pattern);
+          zodType = zodType.refine((value) => regex.test(value), {
+            message: field.patternInvalidErrorMessage,
+          });
+        }
+      },
+    )
+    .with(FieldType.MultipleChoice, () => {
+      zodType = z.array(z.string());
+    })
+    .with(
+      FieldType.Checkbox,
+      FieldType.DataConsent,
+      FieldType.Recaptcha2,
+      FieldType.RecaptchaV3WithScore,
+      () => {
+        zodType = z.boolean({
+          coerce: true,
         });
-        return zodType;
-      }
-      break;
-    default:
+        if (field?.required) {
+          zodType = zodType.refine((value) => value === true, {
+            message: field?.requiredErrorMessage,
+          });
+          return zodType;
+        }
+      },
+    )
+    .otherwise(() => {
       if (typeof mapCustomFieldToZodType === "function") {
         try {
           zodType = mapCustomFieldToZodType(field);
-          if (!zodType) throw new Error("Mapped type is undefined");
-          break;
         } catch (e) {
           throw new Error(
-            `Unsupported field type: ${type}, please provide configuration for mapCustomField`,
+            `Zod mapping failed for custom field: ${field?.type?.name} (${field?.type?.id})`,
           );
         }
       }
-      return exhaustiveCheck(type);
-  }
+    });
+
+  if (!zodType)
+    throw new TypeError(
+      `Mapped zod type is undefined for field: ${field?.type?.name} (${field?.type?.id})`,
+    );
 
   if (!field?.required) {
-    zodType = zodType.optional();
+    zodType = (zodType as z.ZodType).optional();
   }
 
   return zodType;
@@ -157,11 +168,18 @@ export function coerceFormData(
   schema: ReturnType<typeof umbracoFormToZod>,
 ): Record<string, unknown> {
   let output = {};
+
   if (!formData) return output;
   const baseDef = findBaseDef<z.ZodObject<Record<string, any>>>(schema);
 
   for (let key of Object.keys(baseDef.shape)) {
-    parseParams(output, schema, key, formData.get(key));
+    const zodType = baseDef.shape[key];
+    parseParams(
+      output,
+      schema,
+      key,
+      isZodArray(zodType) ? formData.getAll(key) : formData.get(key),
+    );
   }
 
   return output;
@@ -198,6 +216,17 @@ function findBaseDef<R extends z.ZodTypeAny>(def: z.ZodTypeAny) {
     return findBaseDef(def._def.schema);
   }
   return def as R;
+}
+
+function isZodArray(def: z.ZodTypeAny): def is z.ZodArray<z.ZodTypeAny> {
+  if (def instanceof z.ZodOptional || def instanceof z.ZodDefault) {
+    return isZodArray(def._def.innerType);
+  } else if (def instanceof z.ZodArray) {
+    return true;
+  } else if (def instanceof z.ZodEffects) {
+    return isZodArray(def._def.schema);
+  }
+  return false;
 }
 
 function processDef(def: z.ZodTypeAny, o: any, key: string, value: string) {
@@ -237,7 +266,8 @@ function processDef(def: z.ZodTypeAny, o: any, key: string, value: string) {
   } else {
     throw new Error(`Unexpected type ${def._def.typeName} for key ${key}`);
   }
-  if (Array.isArray(o[key])) {
+
+  if (Array.isArray(o[key]) && !Array.isArray(parsedValue)) {
     o[key].push(parsedValue);
   } else {
     o[key] = parsedValue;
@@ -272,10 +302,6 @@ function parseParams(o: any, schema: any, key: string, value: any) {
   }
   const def = shape[key];
   if (def) {
-    processDef(def, o, key, value as string);
+    processDef(def, o, key, value);
   }
-}
-
-function exhaustiveCheck(value: never): never {
-  throw new Error("Exhaustive check failed for value: " + value);
 }

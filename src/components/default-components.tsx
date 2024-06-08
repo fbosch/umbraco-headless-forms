@@ -5,14 +5,14 @@ import { useUmbracoFormContext } from "./UmbracoForm";
 import { getAttributesForFieldType, getFieldByZodIssue } from "./field-utils";
 import { getIssueId } from "./umbraco-form-to-zod";
 import type { ZodIssue } from "zod";
-import type {
-  FormDto,
-  FormPageDto,
-  FormFieldsetDto,
-  FormFieldsetColumnDto,
-  FormFieldDto,
-  DefaultFormFieldTypeName,
-  UmbracoFormFieldSettingsMap,
+import {
+  FieldType,
+  type FormDto,
+  type FormPageDto,
+  type FormFieldsetDto,
+  type FormFieldsetColumnDto,
+  type FormFieldDto,
+  type FieldSettings,
 } from "./types";
 
 type RenderProps = React.HTMLAttributes<HTMLElement> &
@@ -113,19 +113,32 @@ export function Field({ field, children, condition, issues }: FieldProps) {
     ? context.form.indicator
     : "";
   const helpTextId = field.helpText ? "helpText:" + field.id : undefined;
-  const fieldTypeName = field.type?.name as DefaultFormFieldTypeName;
   const helpText = field.helpText ? (
     <span id={helpTextId}>{field.helpText}</span>
   ) : null;
   const validationErrors = showValidationErrors ? (
-    <span id={getIssueId(field, issues?.at(0))}>{issues?.at(0)?.message}</span>
+    <span id={getIssueId(field, issues[0])}>{issues?.[0]?.message}</span>
   ) : null;
 
-  if (fieldTypeName === "Multiple choice") {
+  if (field.type?.id === FieldType.SingleChoice) {
     const radioGroupId = "radiogroup:" + field.id;
     return (
       <fieldset role="radiogroup" aria-labelledby={radioGroupId}>
         <legend id={radioGroupId}>
+          {field.caption} {indicator}
+        </legend>
+        {helpText}
+        {children}
+        {validationErrors}
+      </fieldset>
+    );
+  }
+
+  if (field.type?.id === FieldType.MultipleChoice) {
+    const checkboxGroupId = "checkboxgroup:" + field.id;
+    return (
+      <fieldset aria-labelledby={checkboxGroupId}>
+        <legend id={checkboxGroupId}>
           {field.caption} {indicator}
         </legend>
         {helpText}
@@ -158,22 +171,26 @@ export function Input({ field, issues, ...rest }: InputProps) {
     ...rest,
   };
 
-  return match(field?.type?.name)
+  return match(field?.type?.id)
     .with(
-      "Short answer",
-      "Checkbox",
-      "Data Consent",
-      "File upload",
-      "Recaptcha2",
-      "Recaptcha v3 with score",
+      FieldType.ShortAnswer,
+      FieldType.Checkbox,
+      FieldType.DataConsent,
+      FieldType.FileUpload,
+      FieldType.Recaptcha2,
+      FieldType.RecaptchaV3WithScore,
+      FieldType.HiddenField,
+      FieldType.Date,
+      FieldType.Password,
       () => <input {...attributes} />,
     )
-    .with("Long answer", () => <textarea {...attributes} />)
-    .with("Multiple choice", (typeName) => (
+    .with(FieldType.LongAnswer, FieldType.RichText, () => (
+      <textarea {...attributes} />
+    ))
+    .with(FieldType.SingleChoice, FieldType.MultipleChoice, (uuid) => (
       <Fragment>
         {field?.preValues?.map((preValue) => {
-          const settings =
-            field?.settings as UmbracoFormFieldSettingsMap[typeof typeName];
+          const settings = field?.settings as FieldSettings[typeof uuid];
           const id = preValue.value + ":" + field.id;
           return (
             <Fragment key={id}>
@@ -182,7 +199,11 @@ export function Input({ field, issues, ...rest }: InputProps) {
                 defaultChecked={settings.defaultValue === preValue.value}
                 {...attributes}
                 id={id}
-                type="radio"
+                type={
+                  field.type?.id === FieldType.MultipleChoice
+                    ? "checkbox"
+                    : "radio"
+                }
                 value={preValue.value}
               />
             </Fragment>
@@ -190,7 +211,7 @@ export function Input({ field, issues, ...rest }: InputProps) {
         })}
       </Fragment>
     ))
-    .with("Dropdown", () => (
+    .with(FieldType.DropdownList, () => (
       <select {...attributes}>
         {field?.preValues?.map((preValue) => (
           <option key={`${field.id}.${preValue.value}`} value={preValue.value}>
@@ -199,6 +220,15 @@ export function Input({ field, issues, ...rest }: InputProps) {
         ))}
       </select>
     ))
+    .with(FieldType.TitleAndDescription, (uuid) => {
+      const settings = field?.settings as FieldSettings[typeof uuid];
+      return (
+        <div>
+          <h2>{settings.caption}</h2>
+          <p>{settings.bodyText}</p>
+        </div>
+      );
+    })
     .exhaustive();
 }
 
