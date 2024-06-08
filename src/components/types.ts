@@ -1,5 +1,5 @@
 import {
-  type MapFormFieldToZod,
+  type MapFormFieldToZodFn,
   umbracoFormToZod,
 } from "./umbraco-form-to-zod";
 import type { components } from "./umbraco-form.d.ts";
@@ -197,7 +197,7 @@ export interface UmbracoFormConfig {
   /** Custom schema for form validation; defaults to the umbracoFormToZod implementation */
   schema: ReturnType<typeof umbracoFormToZod>;
   /** Optional custom function to map form fields to Zod types, useful for handling custom field types */
-  mapCustomFieldToZodType?: MapFormFieldToZod;
+  mapCustomFieldToZodType?: MapFormFieldToZodFn;
   /** Flag indicating if client-side validation should be performed; defaults to `false` */
   shouldValidate?: boolean;
   /** Flag indicating if native browser validation should be used alongside client-side validation; defaults to `false` */

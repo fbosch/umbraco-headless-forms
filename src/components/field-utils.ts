@@ -10,14 +10,22 @@ import {
   FieldType,
 } from "./types";
 import { z } from "zod";
-import { getIssueId, type MapFormFieldToZod } from "./umbraco-form-to-zod";
+import { getIssueId, type MapFormFieldToZodFn } from "./umbraco-form-to-zod";
 
 const cachedForms = new WeakSet<FormDto>();
 const cachedFieldsById = new WeakMap<FormDto, Map<string, FormFieldDto>>();
 const cachedFieldsByAlias = new WeakMap<FormDto, Map<string, FormFieldDto>>();
 const cachedFieldsByPage = new WeakMap<FormPageDto, FormFieldDto[]>();
 
-/** Returns all fields in the form definition as a flat array */
+/**
+ * Retrieves all fields from a given form.
+ * If the form's fields are already cached, it returns them from the cache.
+ * Otherwise, it flattens the fields from all pages, fieldsets, and columns,
+ * caches them, and then returns the flattened list of fields.
+ *
+ * @param {FormDto} form - The form data transfer object to retrieve fields from.
+ * @returns {FormFieldDto[]} An array of form field DTOs.
+ */
 export function getAllFields(form: FormDto) {
   if (cachedForms.has(form)) {
     return Array.from(cachedFieldsById.get(form)?.values() ?? []);
@@ -45,6 +53,15 @@ export function getAllFields(form: FormDto) {
   return flattenedFields;
 }
 
+/**
+ * Retrieves a field from a form by its id.
+ * If the field is cached, it returns the cached field.
+ * Otherwise, it finds the field by iterating over all fields.
+ *
+ * @param {FormDto} form - The form data transfer object.
+ * @param {string} id - The id of the field to retrieve.
+ * @returns {FieldDto | undefined} The field with the specified alias, or undefined if not found.
+ */
 export function getFieldById(form: FormDto, id: string) {
   if (cachedFieldsById.has(form)) {
     return cachedFieldsById.get(form)?.get(id);
@@ -52,6 +69,15 @@ export function getFieldById(form: FormDto, id: string) {
   return getAllFields(form)?.find((field) => field?.id === id);
 }
 
+/**
+ * Retrieves a field from a form by its alias.
+ * If the field is cached, it returns the cached field.
+ * Otherwise, it finds the field by iterating over all fields.
+ *
+ * @param {FormDto} form - The form data transfer object.
+ * @param {string} alias - The alias of the field to retrieve.
+ * @returns {FieldDto | undefined} The field with the specified alias, or undefined if not found.
+ */
 export function getFieldByAlias(form: FormDto, alias: string) {
   if (cachedFieldsByAlias.has(form)) {
     return cachedFieldsByAlias.get(form)?.get(alias);
@@ -59,6 +85,11 @@ export function getFieldByAlias(form: FormDto, alias: string) {
   return getAllFields(form)?.find((field) => field?.alias === alias);
 }
 
+/**
+ * Retrieves all fields on a given page
+ * @param {FormPageDto} [page] - The page object containing fieldsets to process.
+ * @returns {FormFieldDto[]} An array of form field objects.
+ */
 export function getAllFieldsOnPage(page?: FormPageDto) {
   if (page && cachedFieldsByPage.has(page)) {
     return cachedFieldsByPage.get(page);
@@ -70,16 +101,29 @@ export function getAllFieldsOnPage(page?: FormPageDto) {
   );
 }
 
+/**
+ * Retrieves the form field associated with a given Zod validation issue.
+ *
+ * @param {FormDto} form - The form data transfer object.
+ * @param {z.ZodIssue} issue - The Zod issue containing the error details.
+ * @returns The form field corresponding to the issue's path.
+ */
 export function getFieldByZodIssue(form: FormDto, issue: z.ZodIssue) {
   const alias = issue.path.join(".");
   return getFieldByAlias(form, alias);
 }
-
-/** walks the form definition and returns all fields that are visible to the user */
+/**
+ * Filters form fields based on conditions.
+ *
+ * @param {FormDto} form - The form data transfer object.
+ * @param {Record<string, unknown>} data - The data to check against the conditions.
+ * @param {MapFormFieldToZodFn} [mapCustomFieldToZodType] - Optional mapping of custom fields to Zod validation schema.
+ * @returns {FormFieldDto[]} An array of form field DTOs that meet the specified conditions.
+ */
 export function filterFieldsByConditions(
   form: FormDto,
   data: Record<string, unknown>,
-  mapCustomFieldToZodType?: MapFormFieldToZod,
+  mapCustomFieldToZodType?: MapFormFieldToZodFn,
 ): FormFieldDto[] {
   const checkCondition = (dto?: DtoWithCondition) =>
     dto

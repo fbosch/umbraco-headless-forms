@@ -8,13 +8,13 @@ import {
 import { FieldType, type FormFieldDto, type FormDto } from "./types";
 
 /** convert a form field definition to a zod type */
-export type MapFormFieldToZod = (field?: FormFieldDto) => z.ZodTypeAny;
+export type MapFormFieldToZodFn = (field?: FormFieldDto) => z.ZodTypeAny;
 
 /** converts an umbraco form definition to a zod schema
  * @see https://docs.umbraco.com/umbraco-forms/developer/ajaxforms#requesting-a-form-definition */
 export function umbracoFormToZod(
   form: FormDto,
-  mapCustomFieldToZodType?: MapFormFieldToZod,
+  mapCustomFieldToZodType?: MapFormFieldToZodFn,
 ) {
   const fields = form?.pages?.flatMap((page) =>
     page?.fieldsets?.flatMap((fieldset) =>
@@ -42,7 +42,7 @@ export function umbracoFormToZod(
 /** map umbraco form fields to zod type */
 export function mapFieldToZod(
   field: FormFieldDto,
-  mapCustomFieldToZodType?: MapFormFieldToZod,
+  mapCustomFieldToZodType?: MapFormFieldToZodFn,
 ): z.ZodTypeAny {
   let zodType;
 
@@ -146,7 +146,7 @@ export function sortZodIssuesByFieldAlias(form: FormDto, issues: z.ZodIssue[]) {
 export function omitFieldsBasedOnConditionFromData(
   form: FormDto,
   data: Record<string, unknown>,
-  mapCustomFieldToZodType?: MapFormFieldToZod,
+  mapCustomFieldToZodType?: MapFormFieldToZodFn,
 ) {
   let output: Record<string, unknown> = {};
   const visibleFields = filterFieldsByConditions(
@@ -178,7 +178,7 @@ export function coerceFormData(
       output,
       schema,
       key,
-      isZodArray(zodType) ? formData.getAll(key) : formData.get(key),
+      isZodArrayType(zodType) ? formData.getAll(key) : formData.get(key),
     );
   }
 
@@ -218,13 +218,13 @@ function findBaseDef<R extends z.ZodTypeAny>(def: z.ZodTypeAny) {
   return def as R;
 }
 
-function isZodArray(def: z.ZodTypeAny): def is z.ZodArray<z.ZodTypeAny> {
+function isZodArrayType(def: z.ZodTypeAny): def is z.ZodArray<z.ZodTypeAny> {
   if (def instanceof z.ZodOptional || def instanceof z.ZodDefault) {
-    return isZodArray(def._def.innerType);
+    return isZodArrayType(def._def.innerType);
   } else if (def instanceof z.ZodArray) {
     return true;
   } else if (def instanceof z.ZodEffects) {
-    return isZodArray(def._def.schema);
+    return isZodArrayType(def._def.schema);
   }
   return false;
 }
