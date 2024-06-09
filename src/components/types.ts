@@ -209,8 +209,6 @@ export interface UmbracoFormContext {
   form: FormDto;
   /** The configuration for the form component */
   config: UmbracoFormConfig;
-  /** The number of times the form or a form page within the form has been attempted to be submitted */
-  progressionAttemptCount: number;
   /** The current page number of the form */
   currentPage: number;
   /** The total number of pages in the form */

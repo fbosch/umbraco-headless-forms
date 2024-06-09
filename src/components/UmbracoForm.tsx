@@ -85,9 +85,8 @@ function UmbracoForm(props: UmbracoFormProps) {
     ...configOverride,
   };
 
-  const [progressionAttemptCount, setProgressionAttemptCount] =
-    useState<number>(0);
   const internalDataRef = useRef<Record<string, unknown>>({});
+  const [attemptCount, setAttemptCount] = useState<number>(0);
   const [formIssues, setFormIssues] = useState<ZodIssue[]>([]);
   const [summaryIssues, setSummaryIssues] = useState<ZodIssue[]>([]);
   const [currentPage, setCurrentPage] = useState(0);
@@ -169,7 +168,7 @@ function UmbracoForm(props: UmbracoFormProps) {
     ) {
       // prevent user from going to next page if there are fields with issues on the current page
 
-      setProgressionAttemptCount((prev) => prev + 1);
+      setAttemptCount((prev) => prev + 1);
       if (form.showValidationSummary) {
         setSummaryIssues(pageIssues);
       }
@@ -186,7 +185,7 @@ function UmbracoForm(props: UmbracoFormProps) {
         internalDataRef.current = coercedData;
         if (
           config.shouldValidate &&
-          progressionAttemptCount > 0 &&
+          attemptCount > 0 &&
           validateFormData(coercedData).success === false
         ) {
           return;
@@ -196,12 +195,7 @@ function UmbracoForm(props: UmbracoFormProps) {
         }
       });
     },
-    [
-      config.schema,
-      config.shouldValidate,
-      progressionAttemptCount,
-      validateFormData,
-    ],
+    [config.schema, config.shouldValidate, attemptCount, validateFormData],
   );
 
   const handleOnBlur = useCallback(
@@ -257,11 +251,11 @@ function UmbracoForm(props: UmbracoFormProps) {
           if (isCurrentPageValid() === false) {
             scrollToTopOfForm();
             focusFirstInvalidField();
-            setProgressionAttemptCount((prev) => prev + 1);
+            setAttemptCount((prev) => prev + 1);
             return;
           }
           setCurrentPage((prev) => prev + 1);
-          setProgressionAttemptCount(0);
+          setAttemptCount(0);
         });
       } else {
         setCurrentPage((prev) => prev + 1);
@@ -288,7 +282,7 @@ function UmbracoForm(props: UmbracoFormProps) {
     (e: React.FormEvent<HTMLFormElement>) => {
       if (config.shouldValidate) {
         startValidationTransition(() => {
-          setProgressionAttemptCount((prev) => prev + 1);
+          setAttemptCount((prev) => prev + 1);
           const submitData = coerceFormData(
             new FormData(e.currentTarget),
             config.schema,
@@ -321,12 +315,11 @@ function UmbracoForm(props: UmbracoFormProps) {
       value={{
         form,
         config,
-        progressionAttemptCount,
         totalPages,
         currentPage,
       }}
     >
-      {form.showValidationSummary && progressionAttemptCount > 0 ? (
+      {form.showValidationSummary && attemptCount > 0 ? (
         <ValidationSummary form={form} issues={summaryIssues} />
       ) : null}
       <Form
