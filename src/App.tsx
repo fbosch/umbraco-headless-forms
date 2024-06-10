@@ -31,7 +31,7 @@ function App() {
           config={{
             schema,
             shouldValidate: true,
-            validateMode: "onBlur",
+            validateMode: "onSubmit",
             reValidateMode: "onChange",
           }}
           renderValidationSummary={(props) =>

@@ -62,6 +62,7 @@ export function Page({
   children,
   condition,
   currentPage,
+  totalPages,
   ...rest
 }: PageProps) {
   if (!condition) return null;
@@ -320,7 +321,7 @@ export function PreviousButton(
     ContextProps &
     NavigationProps,
 ) {
-  const { form, currentPage, ...rest } = props;
+  const { form, currentPage, totalPages, ...rest } = props;
   if (currentPage === 0) {
     return null;
   }

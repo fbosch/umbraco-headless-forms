@@ -110,6 +110,31 @@ export default {
                   },
                 },
                 {
+                  alias: "date",
+                  caption: "Date",
+                  condition: {
+                    actionType: "Show",
+                    logicType: "All",
+                    rules: [],
+                  },
+                  helpText: "",
+                  id: "8d723100-ec34-412f-aaa5-516634d7c833",
+                  pattern: "",
+                  patternInvalidErrorMessage:
+                    "Please provide a valid value for Date",
+                  placeholder: "Date",
+                  preValues: [],
+                  required: false,
+                  requiredErrorMessage: "Please provide a value for Date",
+                  settings: {
+                    placeholder: "",
+                  },
+                  type: {
+                    id: "f8b4c3b8-af28-11de-9dd8-ef5956d89593",
+                    name: "Date",
+                  },
+                },
+                {
                   alias: "country",
                   caption: "Country",
                   condition: {
@@ -259,6 +284,11 @@ export default {
                         field: "6ce0cf78-5102-47c1-85c6-9530d9e9c6a6",
                         operator: "Is",
                         value: "on",
+                      },
+                      {
+                        field: "8d723100-ec34-412f-aaa5-516634d7c833",
+                        operator: "GreaterThen",
+                        value: "2022-01-01",
                       },
                     ],
                   },

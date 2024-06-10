@@ -8,6 +8,7 @@ import {
   type MapFormFieldToZodFn,
   mapFieldToZod,
   coerceRuleValue,
+  coerceFieldValue,
 } from "./umbraco-form-to-zod";
 
 /**
@@ -75,21 +76,21 @@ export function areAllRulesFulfilled(
       );
     }
     const fieldZodType = mapFieldToZod(targetField, mapCustomFieldToZodType);
-    const fieldValue = data[targetField.alias];
+    const fieldValue = coerceFieldValue(fieldZodType, data[targetField.alias]);
     const ruleValue = coerceRuleValue(fieldZodType, rule.value);
 
     switch (operator) {
       case "Is":
-        return fieldValue === ruleValue;
+        return fieldValue.toString() === ruleValue.toString();
       case "IsNot":
-        return fieldValue !== ruleValue;
+        return fieldValue.toString() !== ruleValue.toString();
       case "GreaterThen":
         return fieldValue && ruleValue ? fieldValue > ruleValue : false;
       case "LessThen":
         return fieldValue && ruleValue ? fieldValue < ruleValue : false;
       case "Contains":
         return fieldValue && ruleValue
-          ? fieldValue.toString().includes(ruleValue)
+          ? fieldValue.toString().includes(ruleValue.toString())
           : false;
       case "ContainsIgnoreCase":
         return fieldValue && ruleValue

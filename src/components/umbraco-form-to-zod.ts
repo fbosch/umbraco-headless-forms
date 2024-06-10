@@ -80,7 +80,7 @@ export function mapFieldToZod(
       }
     })
     .with(DefaultFieldType.Date, () => {
-      zodType = z.string().date();
+      zodType = z.date();
     })
     .with(
       DefaultFieldType.Checkbox,
@@ -189,6 +189,23 @@ export function coerceFormData(
   return output;
 }
 
+export function coerceFieldValue(def: z.ZodTypeAny, value: unknown): any {
+  const baseShape = findBaseDef(def);
+
+  if (baseShape instanceof z.ZodBoolean) {
+    return !!value; // coerce to boolean
+  }
+  if (baseShape instanceof z.ZodDate) {
+    try {
+      return new Date(value as string);
+    } catch (e) {
+      return value;
+    }
+  }
+
+  return value;
+}
+
 /** coerces an umbraco condition rule value value based on a zod type */
 export function coerceRuleValue(def: z.ZodTypeAny, value: unknown): any {
   const baseShape = findBaseDef(def);
@@ -206,6 +223,13 @@ export function coerceRuleValue(def: z.ZodTypeAny, value: unknown): any {
       }
     }
     return !!value; // coerce to boolean
+  }
+  if (baseShape instanceof z.ZodDate) {
+    try {
+      return new Date(value as string);
+    } catch (e) {
+      return value;
+    }
   }
   return value;
 }
