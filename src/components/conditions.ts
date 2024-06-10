@@ -76,10 +76,12 @@ export function areAllRulesFulfilled(
       );
     }
     const fieldZodType = mapFieldToZod(targetField, mapCustomFieldToZodType);
+
+    // coerce values based on filed zod type to ensure proper comparisons
     const fieldValue = coerceFieldValue(fieldZodType, data[targetField.alias]);
     const ruleValue = coerceRuleValue(fieldZodType, rule.value);
 
-    return OPERATOR_MAP[operator](fieldValue, ruleValue);
+    return FIELD_CONDITION_OPERATORS[operator](fieldValue, ruleValue);
   });
 
   if (dto.condition?.logicType === "All") {
@@ -92,10 +94,10 @@ export function areAllRulesFulfilled(
 
   return true;
 }
-const OPERATOR_MAP: {
+export const FIELD_CONDITION_OPERATORS: {
   [K in FieldConditionRuleOperator]: (
-    fieldValue: any,
-    ruleValue: any,
+    fieldValue: unknown,
+    ruleValue: unknown,
   ) => boolean;
 } = {
   Is: is,
@@ -116,10 +118,12 @@ const OPERATOR_MAP: {
   NotEndsWithIgnoreCase: negate(ignoreCase(endsWith)),
 } as const;
 
+// negate the output of the comparison function
 function negate(fn: (value: unknown, rule: unknown) => boolean) {
   return (value: unknown, rule: unknown) => !fn(value, rule);
 }
 
+// pass on normalized string values to the comparison function
 function ignoreCase(fn: (value: unknown, rule: unknown) => boolean) {
   return (value: unknown, rule: unknown) =>
     fn(value?.toString()?.toLowerCase(), rule?.toString()?.toLowerCase());
