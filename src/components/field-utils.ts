@@ -26,7 +26,7 @@ const cachedFieldsByPage = new WeakMap<FormPageDto, FormFieldDto[]>();
  * @param {FormDto} form - The form definition to retrieve fields from.
  * @returns {FormFieldDto[]} An array of form fields from the form definition.
  */
-export function getAllFields(form: FormDto) {
+export function getAllFields(form: FormDto): FormFieldDto[] {
   if (cachedForms.has(form)) {
     return Array.from(cachedFieldsById.get(form)?.values() ?? []);
   }
@@ -62,7 +62,10 @@ export function getAllFields(form: FormDto) {
  * @param {string} id - The id of the field to retrieve.
  * @returns {FieldDto | undefined} The field with the specified alias, or undefined if not found.
  */
-export function getFieldById(form: FormDto, id: string) {
+export function getFieldById(
+  form: FormDto,
+  id: string,
+): FormFieldDto | undefined {
   if (cachedFieldsById.has(form)) {
     return cachedFieldsById.get(form)?.get(id);
   }
@@ -78,7 +81,10 @@ export function getFieldById(form: FormDto, id: string) {
  * @param {string} alias - The alias of the field to retrieve.
  * @returns {FieldDto | undefined} The field with the specified alias, or undefined if not found.
  */
-export function getFieldByAlias(form: FormDto, alias: string) {
+export function getFieldByAlias(
+  form: FormDto,
+  alias: string,
+): FormFieldDto | undefined {
   if (cachedFieldsByAlias.has(form)) {
     return cachedFieldsByAlias.get(form)?.get(alias);
   }
@@ -90,14 +96,15 @@ export function getFieldByAlias(form: FormDto, alias: string) {
  * @param {FormPageDto} [page] - The page object containing fieldsets to process.
  * @returns {FormFieldDto[]} An array of form field objects.
  */
-export function getAllFieldsOnPage(page?: FormPageDto) {
+export function getAllFieldsOnPage(page?: FormPageDto): FormFieldDto[] {
   if (page && cachedFieldsByPage.has(page)) {
-    return cachedFieldsByPage.get(page);
+    return cachedFieldsByPage.get(page) ?? [];
   }
   return (
-    page?.fieldsets
+    (page?.fieldsets
       ?.flatMap((fieldset) => fieldset?.columns)
-      ?.flatMap((column) => column?.fields) ?? []
+      ?.flatMap((column) => column?.fields)
+      .filter(Boolean) as FormFieldDto[]) ?? []
   );
 }
 
