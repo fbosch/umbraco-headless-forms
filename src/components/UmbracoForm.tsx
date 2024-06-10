@@ -1,18 +1,12 @@
 import React, {
   Fragment,
-  createContext,
   useCallback,
   useState,
-  useContext,
+  useMemo,
   useTransition,
   useRef,
 } from "react";
-import type {
-  UmbracoFormContext,
-  UmbracoFormConfig,
-  DtoWithCondition,
-  FormDto,
-} from "./types";
+import type { UmbracoFormConfig, DtoWithCondition, FormDto } from "./types";
 import {
   getAllFieldsOnPage,
   filterFieldsByConditions,
@@ -48,12 +42,6 @@ export interface UmbracoFormProps
   renderNextButton?: RenderFn<typeof defaultComponents.NextButton>;
   renderPreviousButton?: RenderFn<typeof defaultComponents.PreviousButton>;
 }
-
-const UmbracoFormContext = createContext<UmbracoFormContext>(
-  {} as UmbracoFormContext,
-);
-
-export const useUmbracoFormContext = () => useContext(UmbracoFormContext);
 
 function UmbracoForm(props: UmbracoFormProps) {
   const [, startValidationTransition] = useTransition();
@@ -100,8 +88,6 @@ function UmbracoForm(props: UmbracoFormProps) {
       internalDataRef.current,
       config?.mapCustomFieldToZodType,
     );
-
-  const totalPages = form?.pages?.filter(checkCondition).length ?? 1;
 
   const validateFormData = useCallback(
     (coercedData: Record<string, unknown>, fieldName?: string) => {
@@ -330,24 +316,27 @@ function UmbracoForm(props: UmbracoFormProps) {
     [focusFirstInvalidField, config.schema, onSubmit],
   );
 
+  const context = useMemo<{ form: FormDto; config: UmbracoFormConfig }>(
+    () => ({
+      form,
+      config,
+    }),
+    [form, config],
+  );
+
+  const totalPages = form?.pages?.filter(checkCondition).length ?? 1;
+
   return (
-    <UmbracoFormContext.Provider
-      value={{
-        form,
-        config,
-        totalPages,
-        currentPage,
-      }}
-    >
+    <Fragment>
       {form.showValidationSummary && attemptCount > 0 ? (
-        <ValidationSummary form={form} issues={summaryIssues} />
+        <ValidationSummary {...context} issues={summaryIssues} />
       ) : null}
       <Form
-        form={form}
         {...rest}
         onChange={handleOnChange}
         onSubmit={handleOnSubmit}
         onBlur={handleOnBlur}
+        {...context}
       >
         {form?.pages?.map((page, index) => (
           <Page
@@ -355,26 +344,31 @@ function UmbracoForm(props: UmbracoFormProps) {
             page={page}
             pageIndex={index}
             condition={checkCondition(page)}
+            currentPage={currentPage}
+            totalPages={totalPages}
+            {...context}
           >
             {page?.fieldsets?.map((fieldset, index) => (
               <Fieldset
                 key={"fieldset." + index}
                 fieldset={fieldset}
                 condition={checkCondition(fieldset)}
+                {...context}
               >
                 {fieldset?.columns?.map((column, index) => (
-                  <Column key={"column." + index} column={column}>
+                  <Column key={"column." + index} column={column} {...context}>
                     {column?.fields?.map((field) => {
                       const issues = formIssues?.filter(
                         (issue) => issue.path.join(".") === field.alias,
                       );
-                      const fieldTypeProps = { field, issues };
+                      const fieldTypeProps = { field, issues, ...context };
                       return (
                         <Field
                           key={"field." + field?.id}
                           field={field}
                           condition={checkCondition(field)}
                           issues={issues}
+                          {...context}
                         >
                           {
                             // fallback to default component if custom component returns undefined
@@ -393,13 +387,27 @@ function UmbracoForm(props: UmbracoFormProps) {
         {children}
         {totalPages > 1 ? (
           <Fragment>
-            <PreviousButton onClick={handlePreviousPage} />
-            <NextButton onClick={handleNextPage} />
+            <PreviousButton
+              onClick={handlePreviousPage}
+              currentPage={currentPage}
+              totalPages={totalPages}
+              {...context}
+            />
+            <NextButton
+              onClick={handleNextPage}
+              currentPage={currentPage}
+              totalPages={totalPages}
+              {...context}
+            />
           </Fragment>
         ) : null}
-        <SubmitButton />
+        <SubmitButton
+          currentPage={currentPage}
+          totalPages={totalPages}
+          {...context}
+        />
       </Form>
-    </UmbracoFormContext.Provider>
+    </Fragment>
   );
 }
 

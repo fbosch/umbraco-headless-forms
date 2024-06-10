@@ -1,7 +1,6 @@
 import React, { Fragment } from "react";
 import { shouldShowIndicator } from "./predicates";
 import { match } from "ts-pattern";
-import { useUmbracoFormContext } from "./UmbracoForm";
 import { getAttributesForFieldType, getFieldByZodIssue } from "./field-utils";
 import { getIssueId } from "./umbraco-form-to-zod";
 import type { ZodIssue } from "zod";
@@ -13,9 +12,21 @@ import {
   type FormFieldsetColumnDto,
   type FormFieldDto,
   type FieldSettings,
+  UmbracoFormConfig,
 } from "./types";
 
+export type ContextProps = {
+  form: FormDto;
+  config: UmbracoFormConfig;
+};
+
+export type NavigationProps = {
+  currentPage: number;
+  totalPages: number;
+};
+
 type RenderProps = React.HTMLAttributes<HTMLElement> &
+  ContextProps &
   (
     | { page: FormPageDto; condition: boolean }
     | { fieldset: FormFieldsetDto; condition: boolean }
@@ -23,9 +34,7 @@ type RenderProps = React.HTMLAttributes<HTMLElement> &
     | { field: FormFieldDto; condition: boolean }
   );
 
-type FormProps = {
-  form: FormDto;
-} & React.FormHTMLAttributes<HTMLFormElement>;
+type FormProps = ContextProps & React.FormHTMLAttributes<HTMLFormElement>;
 
 export function Form({ form, ...rest }: FormProps) {
   return (
@@ -40,20 +49,22 @@ export function Form({ form, ...rest }: FormProps) {
   );
 }
 
-type PageProps = RenderProps & {
-  page: FormPageDto;
-  pageIndex: number;
-  condition: boolean;
-} & React.HTMLAttributes<HTMLElement>;
+type PageProps = React.HTMLAttributes<HTMLElement> &
+  RenderProps &
+  NavigationProps & {
+    page: FormPageDto;
+    pageIndex: number;
+    condition: boolean;
+  };
 
 export function Page({
   page,
   pageIndex,
   children,
   condition,
+  currentPage,
   ...rest
 }: PageProps) {
-  const { currentPage } = useUmbracoFormContext();
   if (!condition) return null;
   const pageIsActive = currentPage === pageIndex;
 
@@ -103,15 +114,17 @@ export type FieldProps = RenderProps & {
   issues?: ZodIssue[];
 };
 
-export function Field({ field, children, condition, issues }: FieldProps) {
-  const context = useUmbracoFormContext();
+export function Field({
+  field,
+  children,
+  form,
+  condition,
+  issues,
+}: FieldProps) {
   if (!condition) return null;
   const hasIssues = issues && issues.length > 0;
-  const showValidationErrors =
-    hasIssues && context.form.hideFieldValidation !== true;
-  const indicator = shouldShowIndicator(field, context.form)
-    ? context.form.indicator
-    : null;
+  const showValidationErrors = hasIssues && form.hideFieldValidation !== true;
+  const indicator = shouldShowIndicator(field, form) ? form.indicator : null;
   const helpTextId = field.helpText ? "helpText:" + field.id : undefined;
   const helpText = field.helpText ? (
     <span id={helpTextId}>{field.helpText}</span>
@@ -165,10 +178,16 @@ export type FieldTypeProps = Omit<FieldProps, "children" | "condition">;
 export function FieldType({
   field,
   issues,
+  form,
+  config,
   ...rest
 }: FieldTypeProps): React.ReactNode | undefined {
-  const context = useUmbracoFormContext();
-  const fieldTypeAttributes = getAttributesForFieldType(field, issues, context);
+  const fieldTypeAttributes = getAttributesForFieldType(
+    field,
+    issues,
+    form,
+    config,
+  );
 
   const attributes = {
     ...fieldTypeAttributes,
@@ -240,46 +259,60 @@ export function FieldType({
     .exhaustive();
 }
 
-export function SubmitButton(props: React.HTMLAttributes<HTMLButtonElement>) {
-  const { form, totalPages, currentPage } = useUmbracoFormContext();
+export function SubmitButton(
+  props: React.HTMLAttributes<HTMLButtonElement> &
+    ContextProps &
+    NavigationProps,
+) {
+  const { form, totalPages, currentPage, ...rest } = props;
   if (totalPages > 1 && currentPage !== totalPages - 1) {
     return null;
   }
   return (
-    <button type="submit" {...props}>
+    <button type="submit" {...rest}>
       {form.submitLabel}
     </button>
   );
 }
 
-export function NextButton(props: React.HTMLAttributes<HTMLButtonElement>) {
-  const { form, totalPages, currentPage } = useUmbracoFormContext();
+export function NextButton(
+  props: React.HTMLAttributes<HTMLButtonElement> & {
+    form: FormDto;
+    currentPage: number;
+    totalPages: number;
+  },
+) {
+  const { form, currentPage, totalPages, ...rest } = props;
   if (currentPage === totalPages - 1) {
     return null;
   }
   return (
-    <button type="button" {...props}>
+    <button type="button" {...rest}>
       {form.nextLabel}
     </button>
   );
 }
 
-export function PreviousButton(props: React.HTMLAttributes<HTMLButtonElement>) {
-  const { form, currentPage } = useUmbracoFormContext();
+export function PreviousButton(
+  props: React.HTMLAttributes<HTMLButtonElement> &
+    ContextProps &
+    NavigationProps,
+) {
+  const { form, currentPage, ...rest } = props;
   if (currentPage === 0) {
     return null;
   }
   return (
-    <button type="button" {...props}>
+    <button type="button" {...rest}>
       {form.previousLabel}
     </button>
   );
 }
 
-export type ValidationSummaryProps = {
-  form: FormDto;
-  issues: ZodIssue[] | undefined;
-};
+export type ValidationSummaryProps = React.HTMLAttributes<HTMLElement> &
+  ContextProps & {
+    issues: ZodIssue[] | undefined;
+  };
 
 export function ValidationSummary(props: ValidationSummaryProps) {
   const { form, issues } = props;

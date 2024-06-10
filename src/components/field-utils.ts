@@ -8,6 +8,7 @@ import {
   type FieldSettings,
   type UmbracoFormContext,
   DefaultFieldType,
+  UmbracoFormConfig,
 } from "./types";
 import { z } from "zod";
 import { getIssueId, type MapFormFieldToZodFn } from "./umbraco-form-to-zod";
@@ -146,10 +147,11 @@ type CommonAttributes = React.InputHTMLAttributes<HTMLInputElement> &
 export function getAttributesForFieldType(
   field: FormFieldDto,
   issues: z.ZodIssue[] | undefined,
-  context: UmbracoFormContext,
+  form: FormDto,
+  config: UmbracoFormConfig,
 ) {
-  const { hideFieldValidation, showValidationSummary } = context.form;
-  const { shouldValidate, shouldUseNativeValidation } = context.config;
+  const { hideFieldValidation, showValidationSummary } = form;
+  const { shouldValidate, shouldUseNativeValidation } = config;
   const hasIssues = issues && issues?.length > 0;
 
   const rendersOnlySummary =
