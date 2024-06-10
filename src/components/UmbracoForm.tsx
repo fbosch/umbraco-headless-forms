@@ -324,13 +324,10 @@ function UmbracoForm(props: UmbracoFormProps) {
     [focusFirstInvalidField, config.schema, onSubmit],
   );
 
-  const context = useMemo<{ form: FormDto; config: UmbracoFormConfig }>(
-    () => ({
-      form,
-      config,
-    }),
-    [form, config],
-  );
+  const context = {
+    form,
+    config,
+  };
 
   const totalPages = form?.pages?.filter(checkCondition).length ?? 1;
 
