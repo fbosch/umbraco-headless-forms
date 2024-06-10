@@ -1,5 +1,4 @@
 import type {
-  FormFieldDto,
   FieldConditionRuleOperator,
   FormDto,
   DtoWithCondition,
@@ -10,29 +9,6 @@ import {
   mapFieldToZod,
   coerceRuleValue,
 } from "./umbraco-form-to-zod";
-
-/**
- * Determines whether an indicator should be shown for a form field.
- *
- * @param {FormFieldDto} field - The form field to check.
- * @param {FormDto} form - The form to which the field belongs.
- * @returns {boolean} - True if an indicator should be shown, false otherwise.
- */
-export function shouldShowIndicator(
-  field: FormFieldDto,
-  form: FormDto,
-): boolean {
-  if (form.fieldIndicationType === "NoIndicator") {
-    return false;
-  }
-  if (form.fieldIndicationType === "MarkMandatoryFields") {
-    return !!field.required;
-  }
-  if (form.fieldIndicationType === "MarkOptionalFields") {
-    return !field.required;
-  }
-  return false;
-}
 
 /**
  * Checks if the condition specified in the data transfer object is fulfilled based on the form data.

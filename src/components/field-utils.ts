@@ -1,12 +1,11 @@
 import { match } from "ts-pattern";
-import { isConditionFulfilled } from "./predicates";
+import { isConditionFulfilled } from "./conditions";
 import {
   type FormFieldDto,
   type FormDto,
   type FormPageDto,
   type DtoWithCondition,
   type FieldSettings,
-  type UmbracoFormContext,
   DefaultFieldType,
   UmbracoFormConfig,
 } from "./types";

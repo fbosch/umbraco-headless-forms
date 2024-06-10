@@ -6,20 +6,20 @@ import React, {
   useTransition,
   useRef,
 } from "react";
+import type { ZodIssue } from "zod";
 import type { UmbracoFormConfig, DtoWithCondition, FormDto } from "./types";
 import {
   getAllFieldsOnPage,
   filterFieldsByConditions,
   getFieldByZodIssue,
 } from "./field-utils";
-import type { ZodIssue } from "zod";
 import {
   coerceFormData,
   sortZodIssuesByFieldAlias,
   umbracoFormToZod,
 } from "./umbraco-form-to-zod";
 import * as defaultComponents from "./default-components";
-import { isConditionFulfilled } from "./predicates";
+import { isConditionFulfilled } from "./conditions";
 
 type RenderFn<T extends React.JSXElementConstructor<any>> = (
   props: React.ComponentProps<T>,
