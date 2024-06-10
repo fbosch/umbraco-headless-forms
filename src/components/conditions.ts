@@ -79,84 +79,7 @@ export function areAllRulesFulfilled(
     const fieldValue = coerceFieldValue(fieldZodType, data[targetField.alias]);
     const ruleValue = coerceRuleValue(fieldZodType, rule.value);
 
-    switch (operator) {
-      case "Is":
-        return fieldValue.toString() === ruleValue.toString();
-      case "IsNot":
-        return fieldValue.toString() !== ruleValue.toString();
-      case "GreaterThen":
-        return fieldValue && ruleValue ? fieldValue > ruleValue : false;
-      case "LessThen":
-        return fieldValue && ruleValue ? fieldValue < ruleValue : false;
-      case "Contains":
-        return fieldValue && ruleValue
-          ? fieldValue.toString().includes(ruleValue.toString())
-          : false;
-      case "ContainsIgnoreCase":
-        return fieldValue && ruleValue
-          ? fieldValue
-              .toString()
-              .toLowerCase()
-              .includes(ruleValue?.toLowerCase())
-          : false;
-      case "StartsWith":
-        return fieldValue && ruleValue
-          ? fieldValue.toString().startsWith(ruleValue)
-          : false;
-      case "StartsWithIgnoreCase":
-        return fieldValue && ruleValue
-          ? fieldValue
-              .toString()
-              .toLowerCase()
-              .startsWith(ruleValue.toLowerCase())
-          : false;
-      case "EndsWith":
-        return fieldValue && ruleValue
-          ? fieldValue.toString().endsWith(ruleValue)
-          : false;
-      case "EndsWithIgnoreCase":
-        return fieldValue && ruleValue
-          ? fieldValue
-              .toString()
-              .toLowerCase()
-              .endsWith(ruleValue.toLowerCase())
-          : false;
-      case "NotContains":
-        return fieldValue && ruleValue
-          ? !fieldValue.toString().includes(ruleValue)
-          : false;
-      case "NotContainsIgnoreCase":
-        return fieldValue && ruleValue
-          ? !fieldValue
-              .toString()
-              .toLowerCase()
-              .includes(ruleValue?.toLowerCase())
-          : false;
-      case "NotStartsWith":
-        return fieldValue && ruleValue
-          ? !fieldValue.toString().startsWith(ruleValue)
-          : false;
-      case "NotStartsWithIgnoreCase":
-        return fieldValue && ruleValue
-          ? !fieldValue
-              .toString()
-              .toLowerCase()
-              .startsWith(ruleValue.toLowerCase())
-          : false;
-      case "NotEndsWith":
-        return fieldValue && ruleValue
-          ? !fieldValue.toString().endsWith(ruleValue)
-          : false;
-      case "NotEndsWithIgnoreCase":
-        return fieldValue && ruleValue
-          ? !fieldValue
-              .toString()
-              .toLowerCase()
-              .endsWith(ruleValue.toLowerCase())
-          : false;
-      default:
-        return exhaustiveCheck(operator);
-    }
+    return OPERATOR_MAP[operator](fieldValue, ruleValue);
   });
 
   if (dto.condition?.logicType === "All") {
@@ -169,7 +92,59 @@ export function areAllRulesFulfilled(
 
   return true;
 }
+const OPERATOR_MAP: {
+  [K in FieldConditionRuleOperator]: (
+    fieldValue: any,
+    ruleValue: any,
+  ) => boolean;
+} = {
+  Is: is,
+  IsNot: negate(is),
+  GreaterThen: greaterThen,
+  LessThen: lessThen,
+  Contains: contains,
+  ContainsIgnoreCase: ignoreCase(contains),
+  StartsWith: startsWith,
+  StartsWithIgnoreCase: ignoreCase(startsWith),
+  EndsWith: endsWith,
+  EndsWithIgnoreCase: ignoreCase(endsWith),
+  NotContains: negate(contains),
+  NotContainsIgnoreCase: negate(ignoreCase(contains)),
+  NotStartsWith: negate(startsWith),
+  NotStartsWithIgnoreCase: negate(ignoreCase(startsWith)),
+  NotEndsWith: negate(endsWith),
+  NotEndsWithIgnoreCase: negate(ignoreCase(endsWith)),
+} as const;
 
-function exhaustiveCheck(value: never): never {
-  throw new Error("Exhaustive check failed for value: " + value);
+function negate(fn: (value: unknown, rule: unknown) => boolean) {
+  return (value: unknown, rule: unknown) => !fn(value, rule);
+}
+
+function ignoreCase(fn: (value: unknown, rule: unknown) => boolean) {
+  return (value: unknown, rule: unknown) =>
+    fn(value?.toString()?.toLowerCase(), rule?.toString()?.toLowerCase());
+}
+
+function greaterThen(value: unknown, rule: unknown) {
+  return value && rule ? value > rule : false;
+}
+
+function lessThen(value: unknown, rule: unknown) {
+  return value && rule ? value < rule : false;
+}
+
+export function is(value: unknown, rule: unknown) {
+  return value?.toString() === rule?.toString();
+}
+
+function contains(value: unknown, rule: unknown) {
+  return rule ? value?.toString().includes(rule?.toString()) ?? false : false;
+}
+
+function startsWith(value: unknown, rule: unknown) {
+  return rule ? value?.toString().startsWith(rule?.toString()) ?? false : false;
+}
+
+function endsWith(value: unknown, rule: unknown) {
+  return rule ? value?.toString().endsWith(rule?.toString()) ?? false : false;
 }

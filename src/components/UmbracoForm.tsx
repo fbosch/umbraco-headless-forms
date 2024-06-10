@@ -4,7 +4,7 @@ import React, {
   useState,
   useMemo,
   useTransition,
-  useRef,
+  useDeferredValue,
 } from "react";
 import type { ZodIssue } from "zod";
 import type { UmbracoFormConfig, DtoWithCondition, FormDto } from "./types";
@@ -75,7 +75,9 @@ function UmbracoForm(props: UmbracoFormProps) {
     ...configOverride,
   } as UmbracoFormConfig;
 
-  const internalDataRef = useRef<Record<string, unknown>>({});
+  const [internalData, setInternalData] = useState<Record<string, unknown>>({});
+  const deferredInternalData = useDeferredValue(internalData);
+
   const [attemptCount, setAttemptCount] = useState<number>(0);
   const [formIssues, setFormIssues] = useState<ZodIssue[]>([]);
   const [summaryIssues, setSummaryIssues] = useState<ZodIssue[]>([]);
@@ -85,7 +87,7 @@ function UmbracoForm(props: UmbracoFormProps) {
     isConditionFulfilled(
       dto,
       form,
-      internalDataRef.current,
+      deferredInternalData,
       config?.mapCustomFieldToZodType,
     );
 
@@ -120,13 +122,13 @@ function UmbracoForm(props: UmbracoFormProps) {
     // dont validate fields that are not visible to the user
     const fieldsWithConditionsMet = filterFieldsByConditions(
       form,
-      internalDataRef.current,
+      deferredInternalData,
       config.mapCustomFieldToZodType,
     ).map((field) => field.alias);
 
     // get all fields with issues and filter out fields with conditions that are not met
     const allFieldIssues = validateFormData(
-      internalDataRef.current,
+      deferredInternalData,
     ).error?.issues?.filter((issue) =>
       fieldsWithConditionsMet.includes(getFieldByZodIssue(form, issue)?.alias),
     );
@@ -163,14 +165,20 @@ function UmbracoForm(props: UmbracoFormProps) {
       return false;
     }
     return true;
-  }, [config.shouldValidate, form, validateFormData, currentPage]);
+  }, [
+    config.shouldValidate,
+    form,
+    validateFormData,
+    currentPage,
+    deferredInternalData,
+  ]);
 
   const handleOnChange = useCallback(
     (e: React.ChangeEvent<HTMLFormElement>) => {
       const field = e.target;
       const formData = new FormData(e.currentTarget);
       const coercedData = coerceFormData(formData, config.schema);
-      internalDataRef.current = coercedData;
+      setInternalData(coercedData);
 
       if (config.shouldValidate) {
         const validateOnChange =
@@ -200,7 +208,7 @@ function UmbracoForm(props: UmbracoFormProps) {
       const field = e.target;
       const formData = new FormData(e.currentTarget as HTMLFormElement);
       const coercedData = coerceFormData(formData, config.schema);
-      internalDataRef.current = coercedData;
+
       if (config.shouldValidate) {
         const validateOnBlur =
           config.validateMode === "onBlur" ||
