@@ -71,7 +71,7 @@ export function areAllRulesFulfilled(
     const operator = rule?.operator as FieldConditionRuleOperator;
     const targetField = getFieldById(form, rule.field);
     if (targetField === undefined || targetField.alias === undefined) {
-      throw new Error(
+      throw new TypeError(
         `Rule target for field id: "${rule.field}" could not be found in the form definition`,
       );
     }
@@ -102,8 +102,8 @@ export const FIELD_CONDITION_OPERATOR_FUNCTIONS: {
 } = {
   Is: is,
   IsNot: not(is),
-  GreaterThen: greaterThen,
-  LessThen: lessThen,
+  GreaterThen: greaterThan,
+  LessThen: lessThan,
   Contains: contains,
   ContainsIgnoreCase: ignoreCase(contains),
   StartsWith: startsWith,
@@ -118,22 +118,20 @@ export const FIELD_CONDITION_OPERATOR_FUNCTIONS: {
   NotEndsWithIgnoreCase: not(ignoreCase(endsWith)),
 } as const;
 
-// negate the output of the comparison function
 function not(fn: (value: unknown, rule: unknown) => boolean) {
   return (value: unknown, rule: unknown) => !fn(value, rule);
 }
 
-// pass on normalized string values to the comparison function
 function ignoreCase(fn: (value: unknown, rule: unknown) => boolean) {
   return (value: unknown, rule: unknown) =>
     fn(value?.toString()?.toLowerCase(), rule?.toString()?.toLowerCase());
 }
 
-function greaterThen(value: unknown, rule: unknown) {
+function greaterThan(value: unknown, rule: unknown) {
   return value && rule ? value > rule : false;
 }
 
-function lessThen(value: unknown, rule: unknown) {
+function lessThan(value: unknown, rule: unknown) {
   return value && rule ? value < rule : false;
 }
 

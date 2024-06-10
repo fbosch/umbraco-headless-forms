@@ -12,7 +12,6 @@ import {
 import { z } from "zod";
 import { getIssueId, type MapFormFieldToZodFn } from "./umbraco-form-to-zod";
 
-const cachedForms = new WeakSet<FormDto>();
 const cachedFieldsById = new WeakMap<FormDto, Map<string, FormFieldDto>>();
 const cachedFieldsByAlias = new WeakMap<FormDto, Map<string, FormFieldDto>>();
 const cachedFieldsByPage = new WeakMap<FormPageDto, FormFieldDto[]>();
@@ -27,7 +26,7 @@ const cachedFieldsByPage = new WeakMap<FormPageDto, FormFieldDto[]>();
  * @returns {FormFieldDto[]} An array of form fields from the form definition.
  */
 export function getAllFields(form: FormDto): FormFieldDto[] {
-  if (cachedForms.has(form)) {
+  if (cachedFieldsById.has(form)) {
     return Array.from(cachedFieldsById.get(form)?.values() ?? []);
   }
   const flattenedFields = form?.pages
@@ -49,7 +48,6 @@ export function getAllFields(form: FormDto): FormFieldDto[] {
     if (field.alias) aliasMap.set(field.alias, field);
   });
   cachedFieldsById.set(form, idMap);
-  cachedForms.add(form);
   return flattenedFields;
 }
 
