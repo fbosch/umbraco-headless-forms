@@ -101,7 +101,7 @@ export const FIELD_CONDITION_OPERATOR_FUNCTIONS: {
   ) => boolean;
 } = {
   Is: is,
-  IsNot: negate(is),
+  IsNot: not(is),
   GreaterThen: greaterThen,
   LessThen: lessThen,
   Contains: contains,
@@ -110,16 +110,16 @@ export const FIELD_CONDITION_OPERATOR_FUNCTIONS: {
   StartsWithIgnoreCase: ignoreCase(startsWith),
   EndsWith: endsWith,
   EndsWithIgnoreCase: ignoreCase(endsWith),
-  NotContains: negate(contains),
-  NotContainsIgnoreCase: negate(ignoreCase(contains)),
-  NotStartsWith: negate(startsWith),
-  NotStartsWithIgnoreCase: negate(ignoreCase(startsWith)),
-  NotEndsWith: negate(endsWith),
-  NotEndsWithIgnoreCase: negate(ignoreCase(endsWith)),
+  NotContains: not(contains),
+  NotContainsIgnoreCase: not(ignoreCase(contains)),
+  NotStartsWith: not(startsWith),
+  NotStartsWithIgnoreCase: not(ignoreCase(startsWith)),
+  NotEndsWith: not(endsWith),
+  NotEndsWithIgnoreCase: not(ignoreCase(endsWith)),
 } as const;
 
 // negate the output of the comparison function
-function negate(fn: (value: unknown, rule: unknown) => boolean) {
+function not(fn: (value: unknown, rule: unknown) => boolean) {
   return (value: unknown, rule: unknown) => !fn(value, rule);
 }
 
