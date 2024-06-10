@@ -5,7 +5,7 @@ import {
   getAllFields,
   getFieldByZodIssue,
 } from "./field-utils";
-import { FieldTypeEnum, type FormFieldDto, type FormDto } from "./types";
+import { DefaultFieldType, type FormFieldDto, type FormDto } from "./types";
 
 /** convert a form field definition to a zod type */
 export type MapFormFieldToZodFn = (field?: FormFieldDto) => z.ZodTypeAny;
@@ -20,9 +20,9 @@ export function umbracoFormToZod(
 
   const mappedFields = fields?.reduce<Record<string, z.ZodTypeAny>>(
     (acc, field) => {
-      // skip title and description fields as they are presenative only
       if (!field?.alias) return acc;
-      if (field?.type?.id === FieldTypeEnum.TitleAndDescription) return acc;
+      // skip title and description fields as they are presentation only and do not need to be validated
+      if (field?.type?.id === DefaultFieldType.TitleAndDescription) return acc;
       return {
         ...acc,
         [field.alias]: mapFieldToZod(field, mapCustomFieldToZodType),
@@ -46,11 +46,11 @@ export function mapFieldToZod(
 
   match(field?.type?.id.toLowerCase())
     .with(
-      FieldTypeEnum.ShortAnswer,
-      FieldTypeEnum.LongAnswer,
-      FieldTypeEnum.FileUpload,
-      FieldTypeEnum.DropdownList,
-      FieldTypeEnum.SingleChoice,
+      DefaultFieldType.ShortAnswer,
+      DefaultFieldType.LongAnswer,
+      DefaultFieldType.FileUpload,
+      DefaultFieldType.DropdownList,
+      DefaultFieldType.SingleChoice,
       () => {
         zodType = z.string({
           required_error: field?.requiredErrorMessage,
@@ -73,17 +73,20 @@ export function mapFieldToZod(
         }
       },
     )
-    .with(FieldTypeEnum.MultipleChoice, () => {
+    .with(DefaultFieldType.MultipleChoice, () => {
       zodType = z.array(z.string());
+      if (field?.required) {
+        zodType = zodType.nonempty();
+      }
     })
-    .with(FieldTypeEnum.Date, () => {
+    .with(DefaultFieldType.Date, () => {
       zodType = z.string().date();
     })
     .with(
-      FieldTypeEnum.Checkbox,
-      FieldTypeEnum.DataConsent,
-      FieldTypeEnum.Recaptcha2,
-      FieldTypeEnum.RecaptchaV3WithScore,
+      DefaultFieldType.Checkbox,
+      DefaultFieldType.DataConsent,
+      DefaultFieldType.Recaptcha2,
+      DefaultFieldType.RecaptchaV3WithScore,
       () => {
         zodType = z.boolean({
           coerce: true,

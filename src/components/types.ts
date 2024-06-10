@@ -6,7 +6,7 @@ import type { components } from "./umbraco-form.d.ts";
 
 /** Enum of default form field type ids
  * @see https://docs.umbraco.com/umbraco-forms/editor/creating-a-form/field-types */
-export enum FieldTypeEnum {
+export enum DefaultFieldType {
   Checkbox = "d5c0c390-ae9a-11de-a69e-666455d89593",
   DataConsent = "a72c9df9-3847-47cf-afb8-b86773fd12cd",
   Date = "f8b4c3b8-af28-11de-9dd8-ef5956d89593",
@@ -24,28 +24,28 @@ export enum FieldTypeEnum {
   TitleAndDescription = "e3fbf6c4-f46c-495e-aff8-4b3c227b4a98",
 }
 
-export interface FieldTypeNameMap {
-  [FieldTypeEnum.Checkbox]: "Checkbox";
-  [FieldTypeEnum.DataConsent]: "Data consent";
-  [FieldTypeEnum.Date]: "Date";
-  [FieldTypeEnum.DropdownList]: "Dropdown";
-  [FieldTypeEnum.FileUpload]: "File upload";
-  [FieldTypeEnum.LongAnswer]: "Long answer";
-  [FieldTypeEnum.HiddenField]: "Hidden field";
-  [FieldTypeEnum.ShortAnswer]: "Short answer";
-  [FieldTypeEnum.MultipleChoice]: "Multiple choice";
-  [FieldTypeEnum.Recaptcha2]: "Recaptcha2";
-  [FieldTypeEnum.RecaptchaV3WithScore]: "Recaptcha v3 with score";
-  [FieldTypeEnum.Password]: "Password";
-  [FieldTypeEnum.RichText]: "Rich text";
-  [FieldTypeEnum.SingleChoice]: "Single choice";
-  [FieldTypeEnum.TitleAndDescription]: "Title and description";
+export interface DefaultFieldTypeNameMap {
+  [DefaultFieldType.Checkbox]: "Checkbox";
+  [DefaultFieldType.DataConsent]: "Data consent";
+  [DefaultFieldType.Date]: "Date";
+  [DefaultFieldType.DropdownList]: "Dropdown";
+  [DefaultFieldType.FileUpload]: "File upload";
+  [DefaultFieldType.LongAnswer]: "Long answer";
+  [DefaultFieldType.HiddenField]: "Hidden field";
+  [DefaultFieldType.ShortAnswer]: "Short answer";
+  [DefaultFieldType.MultipleChoice]: "Multiple choice";
+  [DefaultFieldType.Recaptcha2]: "Recaptcha2";
+  [DefaultFieldType.RecaptchaV3WithScore]: "Recaptcha v3 with score";
+  [DefaultFieldType.Password]: "Password";
+  [DefaultFieldType.RichText]: "Rich text";
+  [DefaultFieldType.SingleChoice]: "Single choice";
+  [DefaultFieldType.TitleAndDescription]: "Title and description";
 }
 
 /** Field type settings
  * @see https://docs.umbraco.com/umbraco-forms/developer/configuration/type-details#field-types */
 export interface FieldSettings {
-  [FieldTypeEnum.ShortAnswer]: {
+  [DefaultFieldType.ShortAnswer]: {
     defaultValue: string;
     placeholder: string;
     showLabel: string;
@@ -53,7 +53,7 @@ export interface FieldSettings {
     fieldType: string;
     autocompleteAttribute: string;
   };
-  [FieldTypeEnum.LongAnswer]: {
+  [DefaultFieldType.LongAnswer]: {
     defaultValue: string;
     placeholder: string;
     showLabel: string;
@@ -61,58 +61,58 @@ export interface FieldSettings {
     numberOfRows: string;
     maximumLength: string;
   };
-  [FieldTypeEnum.HiddenField]: {
+  [DefaultFieldType.HiddenField]: {
     defaultValue: string;
   };
-  [FieldTypeEnum.Checkbox]: {
+  [DefaultFieldType.Checkbox]: {
     caption: string;
     defaultValue: string;
     showLabel: string;
   };
-  [FieldTypeEnum.DropdownList]: {
+  [DefaultFieldType.DropdownList]: {
     defaultValue: string;
     allowMultipleSelections: string;
     showLabel: string;
     autocompleteAttribute: string;
     selectPrompt: string;
   };
-  [FieldTypeEnum.MultipleChoice]: {
+  [DefaultFieldType.MultipleChoice]: {
     defaultValue: string;
     showLabel: string;
     preValues: Array<any>;
   };
-  [FieldTypeEnum.DataConsent]: {
+  [DefaultFieldType.DataConsent]: {
     acceptCopy: string;
     showLabel: string;
   };
-  [FieldTypeEnum.FileUpload]: {
+  [DefaultFieldType.FileUpload]: {
     selectFilesListHeading: string;
   };
-  [FieldTypeEnum.Recaptcha2]: {
+  [DefaultFieldType.Recaptcha2]: {
     theme: string;
     size: string;
     errorMessage: string;
   };
-  [FieldTypeEnum.RecaptchaV3WithScore]: {
+  [DefaultFieldType.RecaptchaV3WithScore]: {
     scoreThreshold: string;
     errorMessage: string;
     saveScore: string;
   };
-  [FieldTypeEnum.Date]: {
+  [DefaultFieldType.Date]: {
     placeholder: string;
   };
-  [FieldTypeEnum.Password]: {
+  [DefaultFieldType.Password]: {
     placeholder: string;
   };
-  [FieldTypeEnum.RichText]: {
+  [DefaultFieldType.RichText]: {
     showLabel: string;
     html: string;
   };
-  [FieldTypeEnum.SingleChoice]: {
+  [DefaultFieldType.SingleChoice]: {
     defaultValue: string;
     showLabel: string;
   };
-  [FieldTypeEnum.TitleAndDescription]: {
+  [DefaultFieldType.TitleAndDescription]: {
     captionTag: string;
     caption: string;
     bodyText: string;
@@ -152,8 +152,8 @@ export interface FormFieldsetColumnDto
  * @see https://docs.umbraco.com/umbraco-forms/developer/configuration/type-details#field-types */
 export interface FormFieldTypeDto
   extends Omit<components["schemas"]["FormFieldTypeDto"], "name"> {
-  name: FieldTypeNameMap[FieldTypeEnum];
-  id: FieldTypeEnum;
+  name: DefaultFieldTypeNameMap[DefaultFieldType];
+  id: DefaultFieldType;
 }
 
 /** Form field
@@ -161,7 +161,7 @@ export interface FormFieldTypeDto
 export interface FormFieldDto
   extends Omit<components["schemas"]["FormFieldDto"], "type" | "settings"> {
   type: FormFieldTypeDto;
-  settings: FieldSettings[FieldTypeEnum];
+  settings: FieldSettings[DefaultFieldType];
 }
 
 /** Form condition
@@ -193,16 +193,29 @@ export type FieldConditionRuleOperator =
 export type DtoWithCondition = FormPageDto | FormFieldsetDto | FormFieldDto;
 
 /** Configuration for the UmbracoForm component instance */
-export interface UmbracoFormConfig {
+export type UmbracoFormConfig = {
   /** Custom schema for form validation; defaults to the umbracoFormToZod implementation */
   schema: ReturnType<typeof umbracoFormToZod>;
   /** Optional custom function to map form fields to Zod types, useful for handling custom field types */
   mapCustomFieldToZodType?: MapFormFieldToZodFn;
-  /** Flag indicating if client-side validation should be performed; defaults to `false` */
-  shouldValidate?: boolean;
-  /** Flag indicating if native browser validation should be used alongside client-side validation; defaults to `false` */
-  shouldUseNativeValidation?: boolean;
-}
+} & (
+  | {
+      /** Flag indicating if client-side validation should be performed; defaults to `false` */
+      shouldValidate: true;
+      /** Flag indicating if native browser validation should be used alongside client-side validation; defaults to `false` */
+      shouldUseNativeValidation?: boolean;
+      /** Flag indicating if the form should be validated on change, blur, or submit; defaults to `onSubmit` */
+      validateMode?: "onBlur" | "onSubmit" | "onChange" | "all";
+      /** Re-validate the form on change, blur, or submit; defaults to `onBlur` */
+      reValidateMode?: "onChange" | "onBlur" | "onSubmit";
+    }
+  | {
+      shouldValidate?: false;
+      shouldUseNativeValidation?: never;
+      validateMode?: never;
+      reValidateMode?: never;
+    }
+);
 
 export interface UmbracoFormContext {
   /** The definition of the form */

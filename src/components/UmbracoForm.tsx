@@ -78,12 +78,14 @@ function UmbracoForm(props: UmbracoFormProps) {
     ...rest
   } = props;
 
-  const config: UmbracoFormConfig = {
+  const config = {
     schema: configOverride?.schema ?? umbracoFormToZod(form),
     shouldValidate: false,
     shouldUseNativeValidation: false,
+    validateMode: "onSubmit",
+    reValidateMode: "onBlur",
     ...configOverride,
-  };
+  } as UmbracoFormConfig;
 
   const internalDataRef = useRef<Record<string, unknown>>({});
   const [attemptCount, setAttemptCount] = useState<number>(0);
@@ -179,21 +181,30 @@ function UmbracoForm(props: UmbracoFormProps) {
 
   const handleOnChange = useCallback(
     (e: React.ChangeEvent<HTMLFormElement>) => {
-      startValidationTransition(() => {
-        const formData = new FormData(e.currentTarget);
-        const coercedData = coerceFormData(formData, config.schema);
-        internalDataRef.current = coercedData;
-        if (
-          config.shouldValidate &&
-          attemptCount > 0 &&
-          validateFormData(coercedData).success === false
-        ) {
-          return;
+      const field = e.target;
+      const formData = new FormData(e.currentTarget);
+      const coercedData = coerceFormData(formData, config.schema);
+      internalDataRef.current = coercedData;
+
+      if (config.shouldValidate) {
+        const validateOnChange =
+          config.validateMode === "onChange" ||
+          config.validateMode === "all" ||
+          (attemptCount > 0 && config.reValidateMode === "onChange");
+
+        if (validateOnChange) {
+          startValidationTransition(() => {
+            if (validateFormData(coercedData, field.name).success === false) {
+              return;
+            }
+            if (typeof onChange === "function") {
+              onChange(e);
+            }
+          });
         }
-        if (typeof onChange === "function") {
-          onChange(e);
-        }
-      });
+      } else if (typeof onChange === "function") {
+        onChange(e);
+      }
     },
     [config.schema, config.shouldValidate, attemptCount, validateFormData],
   );
@@ -204,14 +215,20 @@ function UmbracoForm(props: UmbracoFormProps) {
       const formData = new FormData(e.currentTarget as HTMLFormElement);
       const coercedData = coerceFormData(formData, config.schema);
       internalDataRef.current = coercedData;
+      if (config.shouldValidate) {
+        const validateOnBlur =
+          config.validateMode === "onBlur" ||
+          config.validateMode === "all" ||
+          (attemptCount > 0 && config.reValidateMode === "onBlur");
 
-      if (config?.shouldValidate) {
-        startValidationTransition(() => {
-          validateFormData(coercedData, field.name);
-          if (form.pages && form.pages?.length > 1) {
-            isCurrentPageValid();
-          }
-        });
+        if (validateOnBlur) {
+          startValidationTransition(() => {
+            validateFormData(coercedData, field.name);
+            if (form.pages && form.pages?.length > 1) {
+              isCurrentPageValid();
+            }
+          });
+        }
       }
 
       if (typeof onBlur === "function") {
@@ -246,7 +263,10 @@ function UmbracoForm(props: UmbracoFormProps) {
   const handleNextPage = useCallback(
     (e: React.MouseEvent<HTMLButtonElement>) => {
       e.preventDefault();
-      if (config.shouldValidate) {
+      if (
+        config.shouldValidate &&
+        (config.validateMode === "onSubmit" || config.validateMode === "all")
+      ) {
         startValidationTransition(() => {
           if (isCurrentPageValid() === false) {
             scrollToTopOfForm();
@@ -281,13 +301,13 @@ function UmbracoForm(props: UmbracoFormProps) {
   const handleOnSubmit = useCallback(
     (e: React.FormEvent<HTMLFormElement>) => {
       if (config.shouldValidate) {
+        e.preventDefault();
         startValidationTransition(() => {
           setAttemptCount((prev) => prev + 1);
           const submitData = coerceFormData(
             new FormData(e.currentTarget),
             config.schema,
           );
-          e.preventDefault();
           const validationResult = validateFormData(submitData);
           if (validationResult.success === false) {
             focusFirstInvalidField();

@@ -28,7 +28,12 @@ function App() {
       ) : (
         <UmbracoForm
           form={form}
-          config={{ schema, shouldValidate: true }}
+          config={{
+            schema,
+            shouldValidate: true,
+            validateMode: "onChange",
+            reValidateMode: "onChange",
+          }}
           renderValidationSummary={(props) =>
             createPortal(
               <UmbracoForm.ValidationSummary {...props} />,

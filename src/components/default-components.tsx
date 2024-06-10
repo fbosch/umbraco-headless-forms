@@ -6,7 +6,7 @@ import { getAttributesForFieldType, getFieldByZodIssue } from "./field-utils";
 import { getIssueId } from "./umbraco-form-to-zod";
 import type { ZodIssue } from "zod";
 import {
-  FieldTypeEnum,
+  DefaultFieldType,
   type FormDto,
   type FormPageDto,
   type FormFieldsetDto,
@@ -111,7 +111,7 @@ export function Field({ field, children, condition, issues }: FieldProps) {
     hasIssues && context.form.hideFieldValidation !== true;
   const indicator = shouldShowIndicator(field, context.form)
     ? context.form.indicator
-    : "";
+    : null;
   const helpTextId = field.helpText ? "helpText:" + field.id : undefined;
   const helpText = field.helpText ? (
     <span id={helpTextId}>{field.helpText}</span>
@@ -120,7 +120,7 @@ export function Field({ field, children, condition, issues }: FieldProps) {
     <span id={getIssueId(field, issues[0])}>{issues?.[0]?.message}</span>
   ) : null;
 
-  if (field.type?.id === FieldTypeEnum.SingleChoice) {
+  if (field.type?.id === DefaultFieldType.SingleChoice) {
     const radioGroupId = "radiogroup:" + field.id;
     return (
       <fieldset role="radiogroup" aria-labelledby={radioGroupId}>
@@ -134,7 +134,7 @@ export function Field({ field, children, condition, issues }: FieldProps) {
     );
   }
 
-  if (field.type?.id === FieldTypeEnum.MultipleChoice) {
+  if (field.type?.id === DefaultFieldType.MultipleChoice) {
     const checkboxGroupId = "checkboxgroup:" + field.id;
     return (
       <fieldset aria-labelledby={checkboxGroupId}>
@@ -177,45 +177,49 @@ export function FieldType({
 
   return match(field?.type?.id)
     .with(
-      FieldTypeEnum.ShortAnswer,
-      FieldTypeEnum.Checkbox,
-      FieldTypeEnum.DataConsent,
-      FieldTypeEnum.FileUpload,
-      FieldTypeEnum.Recaptcha2,
-      FieldTypeEnum.RecaptchaV3WithScore,
-      FieldTypeEnum.HiddenField,
-      FieldTypeEnum.Date,
-      FieldTypeEnum.Password,
+      DefaultFieldType.ShortAnswer,
+      DefaultFieldType.Checkbox,
+      DefaultFieldType.DataConsent,
+      DefaultFieldType.FileUpload,
+      DefaultFieldType.Recaptcha2,
+      DefaultFieldType.RecaptchaV3WithScore,
+      DefaultFieldType.HiddenField,
+      DefaultFieldType.Date,
+      DefaultFieldType.Password,
       () => <input {...attributes} />,
     )
-    .with(FieldTypeEnum.LongAnswer, FieldTypeEnum.RichText, () => (
+    .with(DefaultFieldType.LongAnswer, DefaultFieldType.RichText, () => (
       <textarea {...attributes} />
     ))
-    .with(FieldTypeEnum.SingleChoice, FieldTypeEnum.MultipleChoice, (uuid) => (
-      <Fragment>
-        {field?.preValues?.map((preValue) => {
-          const settings = field?.settings as FieldSettings[typeof uuid];
-          const id = preValue.value + ":" + field.id;
-          return (
-            <Fragment key={id}>
-              <label htmlFor={id}>{preValue.caption}</label>
-              <input
-                defaultChecked={settings.defaultValue === preValue.value}
-                {...attributes}
-                id={id}
-                type={
-                  field.type?.id === FieldTypeEnum.MultipleChoice
-                    ? "checkbox"
-                    : "radio"
-                }
-                value={preValue.value}
-              />
-            </Fragment>
-          );
-        })}
-      </Fragment>
-    ))
-    .with(FieldTypeEnum.DropdownList, () => (
+    .with(
+      DefaultFieldType.SingleChoice,
+      DefaultFieldType.MultipleChoice,
+      (uuid) => (
+        <Fragment>
+          {field?.preValues?.map((preValue) => {
+            const settings = field?.settings as FieldSettings[typeof uuid];
+            const id = preValue.value + ":" + field.id;
+            return (
+              <Fragment key={id}>
+                <label htmlFor={id}>{preValue.caption}</label>
+                <input
+                  defaultChecked={settings.defaultValue === preValue.value}
+                  {...attributes}
+                  id={id}
+                  type={
+                    field.type?.id === DefaultFieldType.MultipleChoice
+                      ? "checkbox"
+                      : "radio"
+                  }
+                  value={preValue.value}
+                />
+              </Fragment>
+            );
+          })}
+        </Fragment>
+      ),
+    )
+    .with(DefaultFieldType.DropdownList, () => (
       <select {...attributes}>
         {field?.preValues?.map((preValue) => (
           <option key={`${field.id}.${preValue.value}`} value={preValue.value}>
@@ -224,7 +228,7 @@ export function FieldType({
         ))}
       </select>
     ))
-    .with(FieldTypeEnum.TitleAndDescription, (uuid) => {
+    .with(DefaultFieldType.TitleAndDescription, (uuid) => {
       const settings = field?.settings as FieldSettings[typeof uuid];
       return (
         <div>

@@ -7,7 +7,7 @@ import {
   type DtoWithCondition,
   type FieldSettings,
   type UmbracoFormContext,
-  FieldTypeEnum,
+  DefaultFieldType,
 } from "./types";
 import { z } from "zod";
 import { getIssueId, type MapFormFieldToZodFn } from "./umbraco-form-to-zod";
@@ -23,8 +23,8 @@ const cachedFieldsByPage = new WeakMap<FormPageDto, FormFieldDto[]>();
  * Otherwise, it flattens the fields from all pages, fieldsets, and columns,
  * caches them, and then returns the flattened list of fields.
  *
- * @param {FormDto} form - The form data transfer object to retrieve fields from.
- * @returns {FormFieldDto[]} An array of form field DTOs.
+ * @param {FormDto} form - The form definition to retrieve fields from.
+ * @returns {FormFieldDto[]} An array of form fields from the form definition.
  */
 export function getAllFields(form: FormDto) {
   if (cachedForms.has(form)) {
@@ -104,7 +104,7 @@ export function getAllFieldsOnPage(page?: FormPageDto) {
 /**
  * Retrieves the form field associated with a given Zod validation issue.
  *
- * @param {FormDto} form - The form data transfer object.
+ * @param {FormDto} form - The form definition.
  * @param {z.ZodIssue} issue - The Zod issue containing the error details.
  * @returns The form field corresponding to the issue's path.
  */
@@ -115,10 +115,10 @@ export function getFieldByZodIssue(form: FormDto, issue: z.ZodIssue) {
 /**
  * Filters form fields based on conditions.
  *
- * @param {FormDto} form - The form data transfer object.
+ * @param {FormDto} form - The form definition.
  * @param {Record<string, unknown>} data - The data to check against the conditions.
  * @param {MapFormFieldToZodFn} [mapCustomFieldToZodType] - Optional mapping of custom fields to Zod validation schema.
- * @returns {FormFieldDto[]} An array of form field DTOs that meet the specified conditions.
+ * @returns {FormFieldDto[]} An array of form fields that meet the specified conditions.
  */
 export function filterFieldsByConditions(
   form: FormDto,
@@ -186,7 +186,7 @@ export function getAttributesForFieldType(
     "defaultValue" in field.settings ? field.settings.defaultValue : undefined;
 
   const textAttributes = match(field?.type?.id)
-    .with(FieldTypeEnum.ShortAnswer, FieldTypeEnum.LongAnswer, (id) => {
+    .with(DefaultFieldType.ShortAnswer, DefaultFieldType.LongAnswer, (id) => {
       const settings = field?.settings as FieldSettings[typeof id];
       return {
         autoComplete: settings?.autocompleteAttribute || undefined,
@@ -204,7 +204,7 @@ export function getAttributesForFieldType(
     .otherwise(() => {});
 
   return match(field?.type?.id.toLowerCase())
-    .with(FieldTypeEnum.ShortAnswer, (id) => {
+    .with(DefaultFieldType.ShortAnswer, (id) => {
       const settings = field?.settings as FieldSettings[typeof id];
       return {
         type: settings?.fieldType || "text",
@@ -213,7 +213,7 @@ export function getAttributesForFieldType(
         ...textAttributes,
       } satisfies React.InputHTMLAttributes<HTMLInputElement>;
     })
-    .with(FieldTypeEnum.LongAnswer, (id) => {
+    .with(DefaultFieldType.LongAnswer, (id) => {
       const settings = field?.settings as FieldSettings[typeof id];
       return {
         defaultValue,
@@ -224,13 +224,13 @@ export function getAttributesForFieldType(
           : undefined,
       } satisfies React.TextareaHTMLAttributes<HTMLTextAreaElement>;
     })
-    .with(FieldTypeEnum.MultipleChoice, () => ({
+    .with(DefaultFieldType.MultipleChoice, () => ({
       type: "radio",
       ...commonAttributes,
     }))
     .with(
-      FieldTypeEnum.Checkbox,
-      FieldTypeEnum.DataConsent,
+      DefaultFieldType.Checkbox,
+      DefaultFieldType.DataConsent,
       () =>
         ({
           type: "checkbox",
@@ -239,15 +239,15 @@ export function getAttributesForFieldType(
         }) satisfies React.InputHTMLAttributes<HTMLInputElement>,
     )
     .with(
-      FieldTypeEnum.Recaptcha2,
-      FieldTypeEnum.RecaptchaV3WithScore,
+      DefaultFieldType.Recaptcha2,
+      DefaultFieldType.RecaptchaV3WithScore,
       () =>
         ({
           type: "hidden",
           ...commonAttributes,
         }) satisfies React.InputHTMLAttributes<HTMLInputElement>,
     )
-    .with(FieldTypeEnum.DropdownList, (id) => {
+    .with(DefaultFieldType.DropdownList, (id) => {
       const settings = field?.settings as FieldSettings[typeof id];
       return {
         defaultValue,
@@ -255,20 +255,20 @@ export function getAttributesForFieldType(
         multiple: !!settings?.allowMultipleSelections ?? false,
       } satisfies React.SelectHTMLAttributes<HTMLSelectElement>;
     })
-    .with(FieldTypeEnum.Date, () => ({
+    .with(DefaultFieldType.Date, () => ({
       type: "date",
       ...commonAttributes,
     }))
-    .with(FieldTypeEnum.Password, () => ({
+    .with(DefaultFieldType.Password, () => ({
       type: "password",
       ...commonAttributes,
     }))
-    .with(FieldTypeEnum.RichText, () => ({
+    .with(DefaultFieldType.RichText, () => ({
       type: "textarea",
       ...commonAttributes,
     }))
     .with(
-      FieldTypeEnum.FileUpload,
+      DefaultFieldType.FileUpload,
       () =>
         ({
           type: "file",

@@ -11,10 +11,6 @@ import {
   coerceRuleValue,
 } from "./umbraco-form-to-zod";
 
-export function exhaustiveCheck(value: never): never {
-  throw new Error("Exhaustive check failed for value: " + value);
-}
-
 /**
  * Determines whether an indicator should be shown for a form field.
  *
@@ -195,4 +191,8 @@ export function areAllRulesFulfilled(
   }
 
   return true;
+}
+
+function exhaustiveCheck(value: never): never {
+  throw new Error("Exhaustive check failed for value: " + value);
 }
