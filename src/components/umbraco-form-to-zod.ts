@@ -225,11 +225,7 @@ export function coerceRuleValue(def: z.ZodTypeAny, value: unknown): any {
     return !!value; // coerce to boolean
   }
   if (baseShape instanceof z.ZodDate) {
-    try {
-      return new Date(value as string);
-    } catch (e) {
-      return value;
-    }
+    return new Date(value as string);
   }
   return value;
 }

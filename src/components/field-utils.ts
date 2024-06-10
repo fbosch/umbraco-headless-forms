@@ -30,17 +30,22 @@ export function getAllFields(form: FormDto): FormFieldDto[] {
     return Array.from(cachedFieldsById.get(form)?.values() ?? []);
   }
   const flattenedFields = form?.pages
-    ?.flatMap((page) => {
-      return page?.fieldsets
-        ?.flatMap((fieldset) =>
-          fieldset?.columns?.flatMap((column) => {
-            cachedFieldsByPage.set(page, column.fields ?? []);
-            return column.fields;
+    ?.flatMap((page) =>
+      page?.fieldsets?.flatMap((fieldset) =>
+        fieldset?.columns
+          ?.flatMap((column) => column.fields)
+          ?.map((field, index, array) => {
+            if (index === 0) {
+              // cache fields by page
+              cachedFieldsByPage.set(page, array as FormFieldDto[]);
+            }
+            return field;
           }),
-        )
-        .filter(Boolean) as FormFieldDto[];
-    })
+      ),
+    )
     .filter(Boolean) as FormFieldDto[];
+
+  /// cache flattened fields by id and alias
   const idMap = new Map<string, FormFieldDto>();
   const aliasMap = new Map<string, FormFieldDto>();
   flattenedFields.forEach((field) => {
@@ -49,6 +54,7 @@ export function getAllFields(form: FormDto): FormFieldDto[] {
   });
   cachedFieldsById.set(form, idMap);
   cachedFieldsByAlias.set(form, aliasMap);
+
   return flattenedFields;
 }
 
