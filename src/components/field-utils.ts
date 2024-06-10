@@ -48,6 +48,7 @@ export function getAllFields(form: FormDto): FormFieldDto[] {
     if (field.alias) aliasMap.set(field.alias, field);
   });
   cachedFieldsById.set(form, idMap);
+  cachedFieldsByAlias.set(form, aliasMap);
   return flattenedFields;
 }
 

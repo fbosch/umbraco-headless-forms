@@ -26,22 +26,18 @@ export function isConditionFulfilled(
   data: Record<string, unknown>,
   mapCustomFieldToZodType?: MapFormFieldToZodFn,
 ): boolean {
+  if (!dto.condition) return true;
   const isFulfilled = areAllRulesFulfilled(
     dto,
     form,
     data,
     mapCustomFieldToZodType,
   );
-
-  if (dto?.condition?.actionType === "Show") {
-    return isFulfilled;
-  }
-
-  if (dto?.condition?.actionType === "Hide") {
-    return !isFulfilled;
-  }
-
-  return true;
+  return dto?.condition?.actionType === "Show"
+    ? isFulfilled
+    : dto?.condition?.actionType === "Hide"
+      ? !isFulfilled
+      : true;
 }
 
 /**
