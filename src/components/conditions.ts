@@ -81,7 +81,7 @@ export function areAllRulesFulfilled(
     const fieldValue = coerceFieldValue(fieldZodType, data[targetField.alias]);
     const ruleValue = coerceRuleValue(fieldZodType, rule.value);
 
-    return FIELD_CONDITION_OPERATORS[operator](fieldValue, ruleValue);
+    return FIELD_CONDITION_OPERATOR_FUNCTIONS[operator](fieldValue, ruleValue);
   });
 
   if (dto.condition?.logicType === "All") {
@@ -94,7 +94,7 @@ export function areAllRulesFulfilled(
 
   return true;
 }
-export const FIELD_CONDITION_OPERATORS: {
+export const FIELD_CONDITION_OPERATOR_FUNCTIONS: {
   [K in FieldConditionRuleOperator]: (
     fieldValue: unknown,
     ruleValue: unknown,
